@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Team 15 — 2026 FTIG Golf League</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --green-dark: #1a3a2a;
+    --green-mid: #2d5a3d;
+    --green-light: #4a8c5c;
+    --green-pale: #e8f3ec;
+    --green-pale2: #d0e8d8;
+    --gold: #c9a84c;
+    --gold-light: #f0d98a;
+    --gold-pale: #fdf6e3;
+    --text-primary: #1a1a1a;
+    --text-secondary: #4a5568;
+    --text-muted: #718096;
+    --border: #e2e8f0;
+    --border-dark: #cbd5e0;
+    --white: #ffffff;
+    --bg: #f7f9f7;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.10), 0 2px 6px rgba(0,0,0,0.06);
+    --shadow-lg: 0 20px 48px rgba(0,0,0,0.18), 0 8px 20px rgba(0,0,0,0.10);
+    --radius: 10px;
+    --radius-lg: 16px;
+  }
+
+  body {
+    font-family: 'DM Sans', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text-primary);
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  /* ── HERO HEADER ── */
+  .hero {
+    background: var(--green-dark);
+    background-image:
+      radial-gradient(ellipse at 20% 50%, rgba(74,140,92,0.25) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 20%, rgba(201,168,76,0.12) 0%, transparent 50%);
+    color: white;
+    padding: 3rem 2rem 2.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.02'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    pointer-events: none;
+  }
+  .hero-inner {
+    max-width: 860px;
+    margin: 0 auto;
+    position: relative;
+  }
+  .hero-eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--gold-light);
+    margin-bottom: 10px;
+    font-weight: 500;
+  }
+  .hero-title {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: clamp(2rem, 5vw, 3rem);
+    font-weight: 700;
+    line-height: 1.1;
+    color: white;
+    margin-bottom: 6px;
+  }
+  .hero-subtitle {
+    font-size: 16px;
+    color: rgba(255,255,255,0.65);
+    margin-bottom: 2rem;
+  }
+  .hero-stats {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .stat-card {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: var(--radius);
+    padding: 10px 18px;
+    text-align: center;
+    backdrop-filter: blur(4px);
+  }
+  .stat-num {
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--gold-light);
+    line-height: 1;
+  }
+  .stat-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: rgba(255,255,255,0.5);
+    margin-top: 3px;
+  }
+
+  /* ── MAIN CONTENT ── */
+  .main {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
+  }
+
+  /* ── FILTER BAR ── */
+  .filter-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .filter-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-right: 4px;
+  }
+  .filter-btn {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 6px 16px;
+    border-radius: 999px;
+    border: 1px solid var(--border-dark);
+    background: white;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .filter-btn:hover { background: var(--green-pale); border-color: var(--green-light); color: var(--green-dark); }
+  .filter-btn.active { background: var(--green-dark); color: white; border-color: var(--green-dark); }
+
+  /* ── SECTION HEADERS ── */
+  .section-heading {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 17px;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin: 2rem 0 1rem;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-heading .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--gold);
+    flex-shrink: 0;
+  }
+
+  /* ── SCHEDULE TABLE ── */
+  .schedule-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border);
+  }
+  .schedule-table thead th {
+    background: var(--green-dark);
+    color: rgba(255,255,255,0.65);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-weight: 500;
+    padding: 10px 16px;
+    text-align: left;
+  }
+  .schedule-table tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.12s;
+  }
+  .schedule-table tbody tr:last-child { border-bottom: none; }
+  .schedule-table tbody tr:hover { background: var(--green-pale); }
+  .schedule-table tbody tr.note-row { background: var(--gold-pale); }
+  .schedule-table tbody tr.note-row:hover { background: #faf0d0; }
+  .schedule-table td {
+    padding: 12px 16px;
+    font-size: 14px;
+    vertical-align: middle;
+  }
+  .date-cell { font-weight: 500; white-space: nowrap; color: var(--text-primary); width: 88px; }
+  .course-cell { width: 110px; }
+  .note-cell { color: var(--text-secondary); font-size: 13px; font-style: italic; }
+  .note-cell strong { color: var(--gold); font-style: normal; font-weight: 500; }
+  .opp-cell { width: 52px; color: var(--text-muted); font-size: 13px; text-align: center; }
+
+  .course-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 10px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .badge-manada { background: #dcf5e4; color: #1a6b36; }
+  .badge-blue   { background: #ddeeff; color: #1a4a8a; }
+
+  /* ── OPPONENT LINK ── */
+  .opp-link {
+    color: var(--green-mid);
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+    border-bottom: 1px dashed var(--green-light);
+    transition: all 0.15s;
+    background: none;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    padding: 0;
+    text-align: left;
+  }
+  .opp-link:hover { color: var(--green-dark); border-bottom-style: solid; }
+
+  /* ── PLAYOFFS TABLE ── */
+  .playoffs-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border);
+  }
+  .playoffs-table thead th {
+    background: #2c2c2a;
+    color: rgba(255,255,255,0.6);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-weight: 500;
+    padding: 10px 16px;
+    text-align: left;
+  }
+  .playoffs-table tbody tr { border-bottom: 1px solid var(--border); transition: background 0.12s; }
+  .playoffs-table tbody tr:last-child { border-bottom: none; }
+  .playoffs-table tbody tr:hover { background: #f8f8f6; }
+  .playoffs-table td { padding: 12px 16px; font-size: 14px; vertical-align: middle; }
+
+  .badge-playoff { display: inline-block; background: #fde8e8; color: #a32d2d; font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 999px; }
+  .badge-special { display: inline-block; background: var(--gold-pale); color: #7a5a00; font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 999px; border: 1px solid #e8d070; }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    backdrop-filter: blur(3px);
+    animation: fadeIn 0.15s ease;
+  }
+  .modal-overlay.open { display: flex; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  .modal {
+    background: white;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    width: 100%;
+    max-width: 380px;
+    overflow: hidden;
+    animation: slideUp 0.2s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+  .modal-header {
+    background: var(--green-dark);
+    padding: 1.25rem 1.5rem 1rem;
+    position: relative;
+  }
+  .modal-eyebrow {
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--gold-light);
+    margin-bottom: 4px;
+    font-weight: 500;
+  }
+  .modal-team-name {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: white;
+    line-height: 1.2;
+  }
+  .modal-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: rgba(255,255,255,0.12);
+    border: none;
+    color: white;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+    line-height: 1;
+  }
+  .modal-close:hover { background: rgba(255,255,255,0.22); }
+
+  .modal-body { padding: 1.25rem 1.5rem 1.5rem; }
+  .modal-players { display: flex; flex-direction: column; gap: 12px; }
+
+  .player-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .player-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--green-pale2);
+    border: 2px solid var(--green-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--green-dark);
+    flex-shrink: 0;
+    letter-spacing: 0.04em;
+  }
+  .player-info { flex: 1; min-width: 0; }
+  .player-name { font-size: 14px; font-weight: 500; color: var(--text-primary); }
+  .player-contact { margin-top: 4px; display: flex; flex-direction: column; gap: 2px; }
+  .contact-line {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    text-decoration: none;
+  }
+  .contact-line:hover { color: var(--green-mid); }
+  .contact-icon { width: 14px; height: 14px; flex-shrink: 0; opacity: 0.6; }
+
+  .match-context {
+    margin-top: 14px;
+    padding: 10px 14px;
+    background: var(--green-pale);
+    border-radius: var(--radius);
+    border-left: 3px solid var(--green-light);
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+  .match-context strong { color: var(--green-dark); font-weight: 500; }
+
+  .hidden { display: none !important; }
+
+  /* ── FOOTER ── */
+  footer {
+    text-align: center;
+    padding: 2rem 1rem;
+    font-size: 12px;
+    color: var(--text-muted);
+    border-top: 1px solid var(--border);
+    margin-top: 1rem;
+  }
+
+  @media (max-width: 600px) {
+    .hero { padding: 2rem 1.25rem 1.75rem; }
+    .main { padding: 1.5rem 1rem 3rem; }
+    .opp-cell { display: none; }
+    .schedule-table td { padding: 10px 12px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-inner">
+    <div class="hero-eyebrow">2026 FTIG Golf League &mdash; B-Flight</div>
+    <h1 class="hero-title">Team 15</h1>
+    <p class="hero-subtitle">Amman, Jaison &bull; Simon, Mark &nbsp;&middot;&nbsp; April 16 &ndash; September 14, 2026</p>
+    <div class="hero-stats">
+      <div class="stat-card"><div class="stat-num">15</div><div class="stat-label">Matches</div></div>
+      <div class="stat-card"><div class="stat-num">8</div><div class="stat-label">Manada</div></div>
+      <div class="stat-card"><div class="stat-num">7</div><div class="stat-label">Blue Mtn.</div></div>
+      <div class="stat-card"><div class="stat-num">4</div><div class="stat-label">Playoffs</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- Filter -->
+  <div class="filter-bar">
+    <span class="filter-label">Show:</span>
+    <button class="filter-btn active" onclick="setFilter('all',this)">All matches</button>
+    <button class="filter-btn" onclick="setFilter('manada',this)">Manada only</button>
+    <button class="filter-btn" onclick="setFilter('blue',this)">Blue Mtn. only</button>
+  </div>
+
+  <!-- Regular Season -->
+  <div class="section-heading"><span class="dot"></span>Regular season</div>
+
+  <table class="schedule-table">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Course</th>
+        <th>Opponent &mdash; click for contact</th>
+        <th class="opp-cell" style="text-align:center;">#</th>
+      </tr>
+    </thead>
+    <tbody id="schedule-body">
+
+      <!-- Apr 16 -->
+      <tr data-course="manada">
+        <td class="date-col">Apr 16</td>
+        <td class="course-cell"><span class="course-badge badge-manada">Manada</span></td>
+        <td><button class="opp-link" onclick="openModal(10,'Apr 16 @ Manada')">Collins, Jerry / Rhoads, Greg</button></td>
+        <td class="opp-cell">10</td>
+      </tr>
+
+      <!-- Apr 23 -->
+      <tr data-course="blue">
+        <td class="date-col">Apr 23</td>
+        <td class="course-cell"><span class="course-badge badge-blue">Blue Mtn.</span></td>
+        <td><button class="opp-link" onclick="openModal(8,'Apr 23 @ Blue Mtn.')">Boyles, David / Pueyes, Paul</button></td>
+        <td class="opp-cell">8</td>
+      </tr>
+
+      <!-- Apr 30 -->
+      <tr data-course="manada">
+        <td class="date-col">Apr 30</td>
+        <td class="course-cell"><span class="course-badge badge-manada">Manada</span></td>
+        <td><button class="opp-link" onclick="openModal(6,'Apr 30 @ Manada')">Fegley, Dave / Goetz, Jeremy</button></td>
+        <td class="opp-cell">6</td>
+      </tr>
+
+      <!-- May 7 -->
+      <tr data-course="blue">
+        <td class="date-col">May 7</td>
+        <td class="course-cell"><span class="course-badge badge-blue">Blue Mtn.</span></td>
+        <td><button class="opp-link" onclick="openModal(4,'May 7 @ Blue Mtn.')">Callahan, Jerry / Candelario, Joel</button></td>
+        <td class="opp-cell">4</td>
+      </tr>
+
+      <!-- May 14 -->
+      <tr data-course="manada">
+        <td class="date-col">May 14</td>
+        <td class="course-cell"><span class="course-badge badge-manada">Manada</span></td>
+        <td><button class="opp-link" onclick="openModal(2,'May 14 @ Manada')">Bean, Jesse / Morgan, Matt</button></td>
+        <td class="opp-cell">2</td>
+      </tr>
+
+      <!-- May 21 -->
+      <tr data-course="blue">
+        <td class="date-col">May 21</td>
+        <td class="course-cell"><span class="course-badge badge-blue">Blue Mtn.</span></td>
+        <td><button class="opp-link" onclick="openModal(23,'May 21 @ Blue Mtn.')">Vaught, Larry / Vaught, Douglass / Vaught, Heide</button></td>
+        <td class="opp-cell">23</td>
+      </tr>
+
+      <!-- Makeup 1 -->
+      <tr class="note-row">
+        <td class="date-col">May 28</td>
+        <td colspan="3" class="note-cell"><strong>Make-up week</strong> &mdash; 1st Mid-Year (Memorial Day &bull; @ scheduled course)</td>
+      </tr>
+
+      <!-- Jun 4 -->
+      <tr data-course="manada">
+        <td class="date-col">Jun 4</td>
+        <td class="course-cell"><span class="course-badge badge-manada">Manada</span></td>
+        <td><button class="opp-link" onclick="openModal(21,'Jun 4 @ Manada')">Sherk, Leroy / Sidauga, Mike</button></td>
+        <td class="opp-cell">21</td>
+      </tr>
+
+      <!-- Jun 11 -->
+      <tr data-course="blue">
+        <td class="date-col">Jun 11</td>
+        <td class="course-cell"><span class="course-badge badge-blue">Blue Mtn.</span></td>
+        <td><button class="opp-link" onclick="openModal(19,'Jun 11 @ Blue Mtn.')">Bleistine, Buck / Whritenour, Derek</button></td>
+        <td class="opp-cell">19</td>
+      </tr>
+
+      <!-- Jun 18 -->
+      <tr data-course="manada">
+        <td class="date-col">Jun 18</td>
+        <td class="course-cell"><span class="course-badge badge-manada">Manada</span></td>
+        <td><button class="opp-link" onclick="openModal(17,'Jun 18 @ Manada')">Snell, James / Carmel, Michael</button></td>
+        <td class="opp-cell">17</td>
+      </tr>
+
+      <!-- Jun 25 -->
+      <tr data-course="blue">
+        <td class="date-col">Jun 25</td>
+        <td class="course-cell"><span class="course-badge badge-blue">Blue Mtn.</span></td>
+        <td><button class="opp-link" onclick="openModal(1,'Jun 25 @ Blue Mtn.')">Lincoln, Rodney / Kincaid, Kristofer</button></td>
+        <td class="opp-cell">1</td>
+      </tr>
+
+      <!-- Makeup 2 -->
+      <tr class="note-row">
+        <td class="date-col">Jul 2</td>
+        <td colspan="3" class="note-cell"><strong>Make-up week</strong> &mdash; 2nd Mid-Year (Independence Day &bull; @ scheduled course)</td>
+      </tr>
+
+      <!-- Jul 9 -->
+      <tr data-course="manada">
+        <td class="date-col">Jul 9</td>
+        <td class="course-cell"><span class="course-badge badge-manada">Manada</span></td>
+        <td><button class="opp-link" onclick="openModal(13,'Jul 9 @ Manada')">Brady, John / Curran, Michael</button></td>
+        <td class="opp-cell">13</td>
+      </tr>
+
+      <!-- Jul 16 -->
+      <tr data-course="blue">
+        <td class="date-col">Jul 16</td>
+        <td class="course-cell"><span class="course-badge badge-blue">Blue Mtn.</span></td>
+        <td><button class="opp-link" onclick="openModal(11,'Jul 16 @ Blue Mtn.')">Gettler, Shane / Eisenhauer, Kevin</button></td>
+        <td class="opp-cell">11</td>
+      </tr>
+
+      <!-- Jul 23 -->
+      <tr data-course="manada">
+        <td class="date-col">Jul 23</td>
+        <td class="course-cell"><span class="course-badge badge-manada">Manada</span></td>
+        <td><button class="opp-link" onclick="openModal(9,'Jul 23 @ Manada')">Hartman, Marcus / Gronski, Steve</button></td>
+        <td class="opp-cell">9</td>
+      </tr>
+
+      <!-- Jul 30 -->
+      <tr data-course="blue">
+        <td class="date-col">Jul 30</td>
+        <td class="course-cell"><span class="course-badge badge-blue">Blue Mtn.</span></td>
+        <td><button class="opp-link" onclick="openModal(7,'Jul 30 @ Blue Mtn.')">Warren, Donald / Wenner, Robert</button></td>
+        <td class="opp-cell">7</td>
+      </tr>
+
+      <!-- Aug 6 -->
+      <tr data-course="manada">
+        <td class="date-col">Aug 6</td>
+        <td class="course-cell"><span class="course-badge badge-manada">Manada</span></td>
+        <td><button class="opp-link" onclick="openModal(5,'Aug 6 @ Manada')">Laughman, Oscar / Kell, Brian</button></td>
+        <td class="opp-cell">5</td>
+      </tr>
+
+    </tbody>
+  </table>
+
+  <!-- Post-season -->
+  <div class="section-heading" style="margin-top:2.5rem;"><span class="dot" style="background:#a32d2d;"></span>Post-season &amp; playoffs</div>
+
+  <table class="playoffs-table">
+    <thead>
+      <tr>
+        <th style="width:100px;">Date</th>
+        <th>Event</th>
+        <th style="width:120px;">Cards due</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="date-col">Aug 13</td>
+        <td>End of Year Make-Ups</td>
+        <td style="color:var(--text-muted); font-size:13px;">Aug 15</td>
+      </tr>
+      <tr>
+        <td class="date-col">Aug 20</td>
+        <td><span class="badge-playoff">Playoffs</span></td>
+        <td style="color:var(--text-muted); font-size:13px;">Aug 22</td>
+      </tr>
+      <tr>
+        <td class="date-col">Aug 27</td>
+        <td><span class="badge-playoff">Playoffs</span></td>
+        <td style="color:var(--text-muted); font-size:13px;">Aug 29</td>
+      </tr>
+      <tr>
+        <td class="date-col">Sep 3</td>
+        <td><span class="badge-playoff">Playoffs</span></td>
+        <td style="color:var(--text-muted); font-size:13px;">Sep 5</td>
+      </tr>
+      <tr>
+        <td class="date-col">Sep 10</td>
+        <td><span class="badge-playoff">Playoffs</span></td>
+        <td style="color:var(--text-muted); font-size:13px;">Sep 12</td>
+      </tr>
+      <tr>
+        <td class="date-col">Sep 14</td>
+        <td><span class="badge-special">&#9733; Commanders Cup &amp; End of Year Tournament</span></td>
+        <td style="color:var(--text-muted); font-size:13px;">&mdash;</td>
+      </tr>
+    </tbody>
+  </table>
+
+</div>
+
+<footer>2026 FTIG Golf League &mdash; B-Flight &bull; Team 15: Amman, Jaison &bull; Simon, Mark</footer>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="handleOverlayClick(event)">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <div class="modal-eyebrow" id="modal-eyebrow">Opponent &mdash; Team</div>
+      <div class="modal-team-name" id="modal-team-name">Team Name</div>
+      <button class="modal-close" onclick="closeModal()" title="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-players" id="modal-players"></div>
+      <div class="match-context" id="modal-context"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const TEAMS = {
+  1: {
+    players: [
+      { name: 'Lincoln, Rodney', phone: '717-599-1950' },
+      { name: 'Kincaid, Kristofer', phone: '724-312-7260' }
+    ]
+  },
+  2: {
+    players: [
+      { name: 'Bean, Jesse', phone: '717-813-9531' },
+      { name: 'Morgan, Matt', phone: null }
+    ]
+  },
+  4: {
+    players: [
+      { name: 'Callahan, Jerry', phone: '717-574-2393' },
+      { name: 'Candelario, Joel', phone: '717-639-5350' }
+    ]
+  },
+  5: {
+    players: [
+      { name: 'Laughman, Oscar', phone: '717-698-0200' },
+      { name: 'Kell, Brian', phone: '717-818-8788' }
+    ]
+  },
+  6: {
+    players: [
+      { name: 'Fegley, Dave', phone: '717-507-4248' },
+      { name: 'Goetz, Jeremy', phone: '610-603-6026' }
+    ]
+  },
+  7: {
+    players: [
+      { name: 'Warren, Donald', phone: '724-464-7221' },
+      { name: 'Wenner, Robert', phone: '570-391-7933' }
+    ]
+  },
+  8: {
+    players: [
+      { name: 'Boyles, David', phone: '570-551-1172' },
+      { name: 'Pueyes, Paul', phone: '484-225-4118' }
+    ]
+  },
+  9: {
+    players: [
+      { name: 'Hartman, Marcus', phone: '717-773-6274' },
+      { name: 'Gronski, Steve', phone: '484-256-5687' }
+    ]
+  },
+  10: {
+    players: [
+      { name: 'Collins, Jerry', phone: '717-679-0329' },
+      { name: 'Rhoads, Greg', phone: '717-769-9894' }
+    ]
+  },
+  11: {
+    players: [
+      { name: 'Gettler, Shane', phone: '717-679-7103' },
+      { name: 'Eisenhauer, Kevin', phone: '717-507-0961' }
+    ]
+  },
+  13: {
+    players: [
+      { name: 'Brady, John', phone: '717-269-0146' },
+      { name: 'Curran, Michael', phone: '717-376-4046' }
+    ]
+  },
+  17: {
+    players: [
+      { name: 'Snell, James', phone: '717-926-5188' },
+      { name: 'Carmel, Michael', phone: '717-991-4151' }
+    ]
+  },
+  19: {
+    players: [
+      { name: 'Bleistine, Buck', phone: '570-985-0669' },
+      { name: 'Whritenour, Derek', phone: '570-590-0315' }
+    ]
+  },
+  21: {
+    players: [
+      { name: 'Sherk, Leroy', phone: '717-507-0418' },
+      { name: 'Sidauga, Mike', phone: '717-673-6732' }
+    ]
+  },
+  23: {
+    players: [
+      { name: 'Vaught, Larry', phone: '717-984-0477' },
+      { name: 'Vaught, Douglass', phone: '412-779-8581' },
+      { name: 'Vaught, Heide', phone: '717-984-0476' }
+    ]
+  }
+};
+
+function initials(name) {
+  const parts = name.replace(',','').split(' ').filter(Boolean);
+  if (parts.length >= 2) return (parts[1][0] + parts[0][0]).toUpperCase();
+  return parts[0][0].toUpperCase();
+}
+
+function openModal(teamNum, matchContext) {
+  const team = TEAMS[teamNum];
+  if (!team) return;
+
+  document.getElementById('modal-eyebrow').textContent = 'Opponent — Team ' + teamNum;
+
+  const playerNames = team.players.map(p => p.name.split(',')[0]).join(' / ');
+  document.getElementById('modal-team-name').textContent = playerNames;
+
+  const container = document.getElementById('modal-players');
+  container.innerHTML = '';
+
+  team.players.forEach(player => {
+    const card = document.createElement('div');
+    card.className = 'player-card';
+
+    const av = document.createElement('div');
+    av.className = 'player-avatar';
+    av.textContent = initials(player.name);
+    card.appendChild(av);
+
+    const info = document.createElement('div');
+    info.className = 'player-info';
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'player-name';
+    nameEl.textContent = player.name;
+    info.appendChild(nameEl);
+
+    const contact = document.createElement('div');
+    contact.className = 'player-contact';
+
+    if (player.phone) {
+      const phoneLink = document.createElement('a');
+      phoneLink.href = 'tel:' + player.phone.replace(/-/g,'');
+      phoneLink.className = 'contact-line';
+      phoneLink.innerHTML = `<svg class="contact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.12 1.19 2 2 0 012.12 0h3a2 2 0 012 1.72c.12.96.36 1.9.7 2.81a2 2 0 01-.45 2.11L6.17 7.84a16 16 0 006 6l1.2-1.2a2 2 0 012.11-.45c.91.34 1.85.58 2.81.7A2 2 0 0122 16.92z"/></svg>${player.phone}`;
+      contact.appendChild(phoneLink);
+    } else {
+      const noPhone = document.createElement('span');
+      noPhone.className = 'contact-line';
+      noPhone.style.color = 'var(--text-muted)';
+      noPhone.textContent = 'No number listed';
+      contact.appendChild(noPhone);
+    }
+
+    info.appendChild(contact);
+    card.appendChild(info);
+    container.appendChild(card);
+  });
+
+  document.getElementById('modal-context').innerHTML =
+    '<strong>Next match:</strong> ' + matchContext;
+
+  document.getElementById('modal-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById('modal-overlay')) closeModal();
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+function setFilter(filter, btn) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('#schedule-body tr[data-course]').forEach(row => {
+    if (filter === 'all') row.classList.remove('hidden');
+    else if (filter === 'manada') row.classList.toggle('hidden', row.dataset.course !== 'manada');
+    else row.classList.toggle('hidden', row.dataset.course !== 'blue');
+  });
+}
+</script>
+
+</body>
+</html>
