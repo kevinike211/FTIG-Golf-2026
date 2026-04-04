@@ -144,6 +144,8 @@
   .result-win  { background: var(--win); color: var(--win-text); }
   .result-loss { background: var(--loss); color: var(--loss-text); }
   .result-tie  { background: var(--tie); color: var(--tie-text); }
+  .result-pending { background: #e8eef4; color: #4a6785; }
+  .result-auto-msg { font-size: 12px; color: var(--text-muted); font-style: italic; padding: 8px 0; }
 
   .hidden { display: none !important; }
   .past { opacity: 0.55; }
@@ -503,10 +505,15 @@
     </div>
     <div class="score-modal-body">
       <div class="score-section-label" id="result-label">Result</div>
-      <div class="result-selector" role="group" aria-labelledby="result-label">
-        <button class="result-opt" id="opt-win" onclick="selectResult('win')" aria-pressed="false">Win</button>
-        <button class="result-opt" id="opt-loss" onclick="selectResult('loss')" aria-pressed="false">Loss</button>
-        <button class="result-opt" id="opt-tie" onclick="selectResult('tie')" aria-pressed="false">Tie</button>
+      <div id="result-selector-wrap">
+        <div class="result-selector" role="group" aria-labelledby="result-label">
+          <button class="result-opt" id="opt-win" onclick="selectResult('win')" aria-pressed="false">Win</button>
+          <button class="result-opt" id="opt-loss" onclick="selectResult('loss')" aria-pressed="false">Loss</button>
+          <button class="result-opt" id="opt-tie" onclick="selectResult('tie')" aria-pressed="false">Tie</button>
+        </div>
+        <div id="result-auto-msg" class="result-auto-msg" style="display:none;">
+          <span id="result-auto-text">Auto-calculated when both teams enter scores</span>
+        </div>
       </div>
       <div class="score-section-label">Scores (optional)</div>
       <div class="score-players-grid" id="score-players-grid"></div>
@@ -1164,8 +1171,9 @@ function renderAllScores() {
     const score = scores[key];
     const editable = canEditMatch(key);
     if (score) {
-      let label = score.result === 'win' ? 'Win' : score.result === 'loss' ? 'Loss' : 'Tie';
-      let cls = 'result-' + score.result;
+      const isPending = score.result === 'pending';
+      let label = isPending ? 'Pending' : score.result === 'win' ? 'Win' : score.result === 'loss' ? 'Loss' : 'Tie';
+      let cls = isPending ? 'result-pending' : 'result-' + score.result;
       let scoreParts = [];
       if (score.playerScores) {
         score.playerScores.forEach(ps => { if (ps.score) scoreParts.push(ps.score); });
@@ -1175,10 +1183,10 @@ function renderAllScores() {
       if (editable) {
         cell.innerHTML = `<button class="result-badge ${cls}" onclick="openScore('${key}')" aria-label="Edit result: ${label}${scoreStr}">${label}${scoreStr}</button>${cameraIcon}`;
       } else {
-        cell.innerHTML = `<span class="result-badge-readonly ${cls}">${label}${scoreStr}</span>${cameraIcon}`;
+        cell.innerHTML = `<span class="result-badge ${cls}" style="cursor:default;">${label}${scoreStr}</span>${cameraIcon}`;
       }
-      row.style.background = score.result === 'win' ? 'rgba(220,245,228,0.5)' : score.result === 'loss' ? 'rgba(253,232,232,0.5)' : 'rgba(253,246,227,0.35)';
-      row.dataset.scored = 'true';
+      row.style.background = isPending ? 'rgba(200,215,235,0.3)' : score.result === 'win' ? 'rgba(220,245,228,0.5)' : score.result === 'loss' ? 'rgba(253,232,232,0.5)' : 'rgba(253,246,227,0.35)';
+      row.dataset.scored = isPending ? 'false' : 'true';
     } else {
       if (editable) {
         cell.innerHTML = `<button class="score-entry-btn" onclick="openScore('${key}')" aria-label="Add result for this match">+ Add result</button>`;
@@ -1204,10 +1212,10 @@ function updateStats() {
     if (sched) {
       sched.forEach(m => {
         const s = scores[t + '-' + m.d];
-        if (!s) return;
+        if (!s || s.result === 'pending') return;
         if (s.result === 'win') w++;
         else if (s.result === 'loss') l++;
-        else ti++;
+        else if (s.result === 'tie') ti++;
       });
     }
     const winEl = document.getElementById('sn-'+t+'-win');
@@ -1232,10 +1240,10 @@ function buildStandings() {
     if (sched) {
       sched.forEach(m => {
         const s = scores[t + '-' + m.d];
-        if (!s) return;
+        if (!s || s.result === 'pending') return;
         if (s.result === 'win') w++;
         else if (s.result === 'loss') l++;
-        else ti++;
+        else if (s.result === 'tie') ti++;
         // Collect team scores for average (playerScores[0] is this team's score)
         if (s.playerScores && s.playerScores[0] && s.playerScores[0].score) {
           totalScore += s.playerScores[0].score;
@@ -1314,6 +1322,11 @@ function openScore(key) {
   document.getElementById('opt-loss').setAttribute('aria-pressed', 'false');
   document.getElementById('opt-tie').setAttribute('aria-pressed', 'false');
 
+  // Hide result buttons for non-admins — result is auto-calculated from scores
+  const isAdminUser = userRole === 'admin';
+  document.querySelector('.result-selector').style.display = isAdminUser ? 'flex' : 'none';
+  document.getElementById('result-auto-msg').style.display = isAdminUser ? 'none' : 'block';
+
   const grid = document.getElementById('score-players-grid');
   grid.innerHTML = '';
   const oppNumCell = row ? row.querySelector('.opp-num-cell') : null;
@@ -1344,12 +1357,27 @@ function openScore(key) {
 
   const existing = scores[key];
   if (existing) {
-    selectResult(existing.result);
+    if (existing.result && existing.result !== 'pending') {
+      selectResult(existing.result);
+    }
     if (existing.playerScores) {
       existing.playerScores.forEach((ps, i) => {
         const inp = document.getElementById('pi-'+i);
-        if (inp && ps.score) inp.value = ps.score;
+        if (inp && ps.score && !inp.disabled) inp.value = ps.score;
       });
+    }
+    // Update auto message for non-admins
+    if (!isAdminUser) {
+      const hasTeamScore = existing.playerScores?.[0]?.score;
+      const hasOppScore = existing.playerScores?.[1]?.score;
+      const autoText = document.getElementById('result-auto-text');
+      if (hasTeamScore && hasOppScore) {
+        autoText.textContent = existing.result === 'pending' ? 'Both scores entered \u2014 result will calculate on save' : 'Result: ' + existing.result.charAt(0).toUpperCase() + existing.result.slice(1);
+      } else if (hasOppScore) {
+        autoText.textContent = 'Waiting for opponent to enter their score';
+      } else {
+        autoText.textContent = 'Enter opponent\'s score \u2014 result calculates when both teams report';
+      }
     }
     if (existing.notes) document.getElementById('score-notes').value = existing.notes;
     document.getElementById('btn-delete').style.display = 'inline-block';
@@ -1365,7 +1393,12 @@ function openScore(key) {
   document.body.style.overflow = 'hidden';
 
   // Focus the first interactive element in the modal
-  setTimeout(() => document.getElementById('opt-win').focus(), 100);
+  // Focus: admins get win button, members get the first enabled score input
+  if (isAdminUser) {
+    setTimeout(() => document.getElementById('opt-win').focus(), 100);
+  } else {
+    setTimeout(() => { const inp = document.getElementById('pi-1'); if (inp) inp.focus(); }, 100);
+  }
 }
 
 function selectResult(r) {
@@ -1392,36 +1425,80 @@ function autoSelectResult() {
 }
 
 async function saveScore() {
-  if (!currentScoreResult) { showToast('Please select Win, Loss, or Tie'); return; }
+  const isAdmin = userRole === 'admin';
+  // Admins must pick a result; non-admins don't need to (auto-calculated)
+  if (isAdmin && !currentScoreResult) { showToast('Please select Win, Loss, or Tie'); return; }
+
   const parts = currentScoreKey.split('-');
   const teamNum = parseInt(parts[0]);
   const dateStr = parts.slice(1).join('-');
   const row = document.querySelector(`tr[data-key="${currentScoreKey}"]`);
   const oppNumCell = row ? row.querySelector('.opp-num-cell') : null;
-  const oppNum = oppNumCell ? oppNumCell.textContent.trim() : '?';
+  const oppNum = oppNumCell ? parseInt(oppNumCell.textContent.trim()) : null;
   const teamLabels = ['Team ' + teamNum, 'Team ' + oppNum];
   const playerScores = teamLabels.map((label, i) => {
     const inp = document.getElementById('pi-'+i);
     return { name: label, score: inp && inp.value ? parseInt(inp.value) : null };
   });
+
+  const schedule = TEAM_SCHEDULES[teamNum];
+  const match = schedule ? schedule.find(m => m.d === dateStr) : null;
+  let mirrorKey = match ? match.o + '-' + dateStr : null;
+
+  // For non-admins: merge with existing data from opponent
+  // Team member enters opponent score (pi-1 mapped to idx 1 for the opp)
+  // Check if mirror already has a score (opponent already entered)
+  const existingMirror = mirrorKey ? scores[mirrorKey] : null;
+  const existingPrimary = scores[currentScoreKey];
+
+  // Build the primary score entry
+  let teamScore = playerScores[0].score;   // this team's score
+  let oppScore = playerScores[1].score;    // opponent's score
+
+  // If non-admin: they only enter the opponent's score (oppScore)
+  // Pull the team's own score from the mirror if the opponent already entered it
+  if (!isAdmin && existingMirror && existingMirror.playerScores) {
+    const mirrorOppScore = existingMirror.playerScores[1]?.score; // mirror's opp = this team
+    if (mirrorOppScore && !teamScore) teamScore = mirrorOppScore;
+  }
+  // Also preserve existing scores that weren't changed
+  if (!isAdmin && existingPrimary && existingPrimary.playerScores) {
+    if (!teamScore && existingPrimary.playerScores[0]?.score) teamScore = existingPrimary.playerScores[0].score;
+    if (!oppScore && existingPrimary.playerScores[1]?.score) oppScore = existingPrimary.playerScores[1].score;
+  }
+
+  playerScores[0].score = teamScore;
+  playerScores[1].score = oppScore;
+
+  // Auto-calculate result if both scores exist (for non-admins, or update for admins too)
+  let result = currentScoreResult; // admin's manual pick
+  if (!isAdmin) {
+    if (teamScore && oppScore) {
+      result = teamScore < oppScore ? 'win' : teamScore > oppScore ? 'loss' : 'tie';
+    } else {
+      result = 'pending'; // only one score entered so far
+    }
+  }
+
   scores[currentScoreKey] = {
-    result: currentScoreResult,
+    result: result,
     playerScores,
     notes: document.getElementById('score-notes').value.trim(),
     hasImages: currentImages.length > 0,
     savedAt: new Date().toISOString()
   };
 
-  // Mirror result to opponent
-  const schedule = TEAM_SCHEDULES[teamNum];
-  const match = schedule ? schedule.find(m => m.d === dateStr) : null;
-  let mirrorKey = null;
+  // Mirror to opponent
+  let mirrorResult = null;
   if (match) {
-    mirrorKey = match.o + '-' + dateStr;
-    const mirrorResult = currentScoreResult === 'win' ? 'loss' : currentScoreResult === 'loss' ? 'win' : 'tie';
+    if (result === 'win') mirrorResult = 'loss';
+    else if (result === 'loss') mirrorResult = 'win';
+    else if (result === 'tie') mirrorResult = 'tie';
+    else mirrorResult = 'pending';
+
     const mirrorScores = [
-      { name: 'Team ' + match.o, score: playerScores[1] ? playerScores[1].score : null },
-      { name: 'Team ' + teamNum, score: playerScores[0] ? playerScores[0].score : null }
+      { name: 'Team ' + match.o, score: oppScore },
+      { name: 'Team ' + teamNum, score: teamScore }
     ];
     scores[mirrorKey] = {
       result: mirrorResult,
