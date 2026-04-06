@@ -524,7 +524,7 @@
           <button class="result-opt" id="opt-tie" onclick="selectResult('tie')" aria-pressed="false">Tie</button>
         </div>
         <div id="result-auto-msg" class="result-auto-msg" style="display:none;">
-          <span id="result-auto-text">Auto-calculated when both teams enter scores</span>
+          <span id="result-auto-text">Auto-calculated from points when both teams report</span>
         </div>
       </div>
       <div class="score-section-label">Scores (optional)</div>
@@ -534,11 +534,11 @@
         <div class="points-row">
           <div class="points-block">
             <label class="score-player-name" id="pts-label-0" for="pts-0">Team</label>
-            <input class="score-input points-input" type="number" min="0" max="9" placeholder="0" id="pts-0" oninput="validatePoints()">
+            <input class="score-input points-input" type="number" min="0" max="9" placeholder="0" id="pts-0" oninput="validatePoints();autoSelectResult()">
           </div>
           <div class="points-block">
             <label class="score-player-name" id="pts-label-1" for="pts-1">Opponent</label>
-            <input class="score-input points-input" type="number" min="0" max="9" placeholder="0" id="pts-1" oninput="validatePoints()">
+            <input class="score-input points-input" type="number" min="0" max="9" placeholder="0" id="pts-1" oninput="validatePoints();autoSelectResult()">
           </div>
           <div class="points-total">
             <span class="points-total-label">Total:</span>
@@ -1295,8 +1295,11 @@ function buildStandings() {
     return { num: t, w, l, ti, played, pct, avg, pts, names };
   });
 
-  // Sort: by win pct desc, then wins desc, then fewer losses
+  // Sort: by total points desc, then win pct, then wins, then fewer losses
   standings.sort((a, b) => {
+    const aPts = a.pts !== null ? a.pts : -1;
+    const bPts = b.pts !== null ? b.pts : -1;
+    if (bPts !== aPts) return bPts - aPts;
     if (b.pct !== a.pct) return b.pct - a.pct;
     if (b.w !== a.w) return b.w - a.w;
     if (a.l !== b.l) return a.l - b.l;
@@ -1381,7 +1384,7 @@ function openScore(key) {
     div.innerHTML = `<label class="score-player-name" for="pi-${item.idx}">${item.label}</label>
       <div class="score-input-row">
         <span class="score-input-label">Score</span>
-        <input class="score-input" type="number" min="60" max="130" placeholder="\u2014" id="pi-${item.idx}" aria-label="Score for ${item.label}" oninput="autoSelectResult()" ${isOwnTeamForMember ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''}>
+        <input class="score-input" type="number" min="60" max="130" placeholder="\u2014" id="pi-${item.idx}" aria-label="Score for ${item.label}" oninput="" ${isOwnTeamForMember ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''}>
       </div>`;
     grid.appendChild(div);
   });
@@ -1426,15 +1429,15 @@ function openScore(key) {
     }
     // Update auto message for non-admins
     if (!isAdminUser) {
-      const hasTeamScore = existing.playerScores?.[0]?.score;
-      const hasOppScore = existing.playerScores?.[1]?.score;
+      const hasTeamPts = existing.points?.[0] != null;
+      const hasOppPts = existing.points?.[1] != null;
       const autoText = document.getElementById('result-auto-text');
-      if (hasTeamScore && hasOppScore) {
-        autoText.textContent = existing.result === 'pending' ? 'Both scores entered \u2014 result will calculate on save' : 'Result: ' + existing.result.charAt(0).toUpperCase() + existing.result.slice(1);
-      } else if (hasOppScore) {
-        autoText.textContent = 'Waiting for opponent to enter their score';
+      if (hasTeamPts && hasOppPts) {
+        autoText.textContent = existing.result === 'pending' ? 'Both points entered \u2014 result will calculate on save' : 'Result: ' + existing.result.charAt(0).toUpperCase() + existing.result.slice(1);
+      } else if (hasOppPts) {
+        autoText.textContent = 'Waiting for opponent to enter their points';
       } else {
-        autoText.textContent = 'Enter opponent\'s score \u2014 result calculates when both teams report';
+        autoText.textContent = 'Enter opponent\'s points \u2014 result calculates when both teams report';
       }
     }
     if (existing.notes) document.getElementById('score-notes').value = existing.notes;
@@ -1494,15 +1497,15 @@ function validatePoints() {
 }
 
 function autoSelectResult() {
-  const inp0 = document.getElementById('pi-0');
-  const inp1 = document.getElementById('pi-1');
-  if (!inp0 || !inp1) return;
-  const s0 = inp0.value ? parseInt(inp0.value) : null;
-  const s1 = inp1.value ? parseInt(inp1.value) : null;
-  if (s0 === null || s1 === null) return;
-  // In golf, lower score wins
-  if (s0 < s1) selectResult('win');
-  else if (s0 > s1) selectResult('loss');
+  // Auto-select based on points (more points = win)
+  const p0 = document.getElementById('pts-0');
+  const p1 = document.getElementById('pts-1');
+  if (!p0 || !p1) return;
+  const v0 = p0.value !== '' ? parseInt(p0.value) : null;
+  const v1 = p1.value !== '' ? parseInt(p1.value) : null;
+  if (v0 === null || v1 === null) return;
+  if (v0 > v1) selectResult('win');
+  else if (v0 < v1) selectResult('loss');
   else selectResult('tie');
 }
 
@@ -1571,13 +1574,16 @@ async function saveScore() {
     if (pts1 === null && existingPrimary.points[1] != null) pts1 = existingPrimary.points[1];
   }
 
-  // Auto-calculate result if both scores exist (for non-admins, or update for admins too)
+  // Auto-calculate result from POINTS (not golf scores)
+  // Win = more points, Loss = fewer points, Tie = equal points
   let result = currentScoreResult; // admin's manual pick
   if (!isAdmin) {
-    if (teamScore && oppScore) {
-      result = teamScore < oppScore ? 'win' : teamScore > oppScore ? 'loss' : 'tie';
+    if (pts0 != null && pts1 != null) {
+      result = pts0 > pts1 ? 'win' : pts0 < pts1 ? 'loss' : 'tie';
+    } else if (pts0 != null || pts1 != null) {
+      result = 'pending'; // one team entered points, waiting for the other
     } else {
-      result = 'pending'; // only one score entered so far
+      result = 'pending';
     }
   }
 
