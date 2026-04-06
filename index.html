@@ -147,6 +147,18 @@
   .result-pending { background: #e8eef4; color: #4a6785; }
   .result-auto-msg { font-size: 12px; color: var(--text-muted); font-style: italic; padding: 8px 0; }
 
+  /* ── POINTS ENTRY ── */
+  .points-entry { margin-top: 0.25rem; }
+  .points-row { display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; }
+  .points-block { flex: 1; min-width: 90px; }
+  .points-input { width: 60px; }
+  .points-total { display: flex; align-items: center; gap: 4px; font-size: 13px; padding-bottom: 6px; }
+  .points-total-label { color: var(--text-muted); }
+  .points-total-num { font-weight: 700; color: var(--green-dark); font-size: 16px; }
+  .points-total-max { color: var(--text-muted); font-size: 11px; }
+  .points-total-num.over { color: #a32d2d; }
+  .points-error { color: #a32d2d; font-size: 12px; margin-top: 4px; }
+
   .hidden { display: none !important; }
   .past { opacity: 0.55; }
   .current-week td:first-child::before { content: '\25B6 NOW '; color: var(--gold); font-size: 9px; font-weight: 700; letter-spacing: 0.05em; vertical-align: middle; margin-right: 4px; }
@@ -517,6 +529,25 @@
       </div>
       <div class="score-section-label">Scores (optional)</div>
       <div class="score-players-grid" id="score-players-grid"></div>
+      <div class="score-section-label">Points</div>
+      <div class="points-entry" id="points-entry">
+        <div class="points-row">
+          <div class="points-block">
+            <label class="score-player-name" id="pts-label-0" for="pts-0">Team</label>
+            <input class="score-input points-input" type="number" min="0" max="9" placeholder="0" id="pts-0" oninput="validatePoints()">
+          </div>
+          <div class="points-block">
+            <label class="score-player-name" id="pts-label-1" for="pts-1">Opponent</label>
+            <input class="score-input points-input" type="number" min="0" max="9" placeholder="0" id="pts-1" oninput="validatePoints()">
+          </div>
+          <div class="points-total">
+            <span class="points-total-label">Total:</span>
+            <span class="points-total-num" id="pts-total">0</span>
+            <span class="points-total-max">/ 9</span>
+          </div>
+        </div>
+        <div class="points-error" id="pts-error" style="display:none;">Combined points cannot exceed 9</div>
+      </div>
       <div class="score-section-label"><label for="score-notes">Notes (optional)</label></div>
       <textarea class="notes-input" id="score-notes" placeholder="e.g. great match, played in rain..."></textarea>
       <div class="score-section-label">Images (optional)</div>
@@ -1235,7 +1266,7 @@ function buildStandings() {
 
   // Compute stats for each team
   const standings = ALL_TEAM_NUMS.map(t => {
-    let w=0, l=0, ti=0, totalScore=0, scoreCount=0;
+    let w=0, l=0, ti=0, totalScore=0, scoreCount=0, totalPts=0;
     const sched = TEAM_SCHEDULES[t];
     if (sched) {
       sched.forEach(m => {
@@ -1249,12 +1280,16 @@ function buildStandings() {
           totalScore += s.playerScores[0].score;
           scoreCount++;
         }
+        // Collect match points (points[0] is this team's points)
+        if (s.points && s.points[0] != null) {
+          totalPts += s.points[0];
+        }
       });
     }
     const played = w + l + ti;
     const pct = played > 0 ? (w + ti * 0.5) / played : 0;
     const avg = scoreCount > 0 ? totalScore / scoreCount : null;
-    const pts = scoreCount > 0 ? totalScore : null;
+    const pts = played > 0 ? totalPts : null;
     const team = TEAMS[t];
     const names = team ? team.players.map(p => p.name.split(',')[0]).join(' / ') : '';
     return { num: t, w, l, ti, played, pct, avg, pts, names };
@@ -1353,6 +1388,27 @@ function openScore(key) {
 
   document.getElementById('score-notes').value = '';
 
+  // Set up points labels and reset
+  document.getElementById('pts-label-0').textContent = 'Team ' + teamNum;
+  document.getElementById('pts-label-1').textContent = 'Team ' + oppNum;
+  document.getElementById('pts-0').value = '';
+  document.getElementById('pts-1').value = '';
+  document.getElementById('pts-0').disabled = false;
+  document.getElementById('pts-1').disabled = false;
+  // Non-admins can only enter their opponent's points, not their own
+  if (!isAdminUser) {
+    document.getElementById('pts-0').disabled = true;
+    document.getElementById('pts-0').style.opacity = '0.4';
+    document.getElementById('pts-0').style.cursor = 'not-allowed';
+    document.getElementById('pts-1').disabled = false;
+    document.getElementById('pts-1').style.opacity = '';
+    document.getElementById('pts-1').style.cursor = '';
+  } else {
+    document.getElementById('pts-0').style.opacity = '';
+    document.getElementById('pts-0').style.cursor = '';
+  }
+  validatePoints();
+
   // Reset images
   currentImages = [];
   renderImageSlots();
@@ -1382,6 +1438,12 @@ function openScore(key) {
       }
     }
     if (existing.notes) document.getElementById('score-notes').value = existing.notes;
+    // Load points
+    if (existing.points) {
+      if (existing.points[0] != null) document.getElementById('pts-0').value = existing.points[0];
+      if (existing.points[1] != null) document.getElementById('pts-1').value = existing.points[1];
+      validatePoints();
+    }
     document.getElementById('btn-delete').style.display = 'inline-block';
     // Load images from IndexedDB
     ImageStore.get(key).then(imgs => {
@@ -1413,6 +1475,24 @@ function selectResult(r) {
   document.getElementById('opt-tie').setAttribute('aria-pressed', r==='tie' ? 'true' : 'false');
 }
 
+function validatePoints() {
+  const p0 = document.getElementById('pts-0');
+  const p1 = document.getElementById('pts-1');
+  const v0 = p0 && p0.value ? parseInt(p0.value) : 0;
+  const v1 = p1 && p1.value ? parseInt(p1.value) : 0;
+  const total = v0 + v1;
+  const totalEl = document.getElementById('pts-total');
+  const errorEl = document.getElementById('pts-error');
+  totalEl.textContent = total;
+  if (total > 9) {
+    totalEl.classList.add('over');
+    errorEl.style.display = 'block';
+  } else {
+    totalEl.classList.remove('over');
+    errorEl.style.display = 'none';
+  }
+}
+
 function autoSelectResult() {
   const inp0 = document.getElementById('pi-0');
   const inp1 = document.getElementById('pi-1');
@@ -1430,6 +1510,16 @@ async function saveScore() {
   const isAdmin = userRole === 'admin';
   // Admins must pick a result; non-admins don't need to (auto-calculated)
   if (isAdmin && !currentScoreResult) { showToast('Please select Win, Loss, or Tie'); return; }
+
+  // Validate points
+  const ptsInp0 = document.getElementById('pts-0');
+  const ptsInp1 = document.getElementById('pts-1');
+  let pts0 = ptsInp0 && ptsInp0.value !== '' ? parseInt(ptsInp0.value) : null;
+  let pts1 = ptsInp1 && ptsInp1.value !== '' ? parseInt(ptsInp1.value) : null;
+  if (pts0 !== null && pts1 !== null && pts0 + pts1 > 9) {
+    showToast('Combined points cannot exceed 9');
+    return;
+  }
 
   const parts = currentScoreKey.split('-');
   const teamNum = parseInt(parts[0]);
@@ -1472,6 +1562,15 @@ async function saveScore() {
   playerScores[0].score = teamScore;
   playerScores[1].score = oppScore;
 
+  // Merge points from mirror/existing (same logic as scores)
+  if (!isAdmin && existingMirror && existingMirror.points) {
+    if (pts0 === null && existingMirror.points[1] != null) pts0 = existingMirror.points[1];
+  }
+  if (!isAdmin && existingPrimary && existingPrimary.points) {
+    if (pts0 === null && existingPrimary.points[0] != null) pts0 = existingPrimary.points[0];
+    if (pts1 === null && existingPrimary.points[1] != null) pts1 = existingPrimary.points[1];
+  }
+
   // Auto-calculate result if both scores exist (for non-admins, or update for admins too)
   let result = currentScoreResult; // admin's manual pick
   if (!isAdmin) {
@@ -1485,6 +1584,7 @@ async function saveScore() {
   scores[currentScoreKey] = {
     result: result,
     playerScores,
+    points: [pts0, pts1],
     notes: document.getElementById('score-notes').value.trim(),
     hasImages: currentImages.length > 0,
     savedAt: new Date().toISOString()
@@ -1505,6 +1605,7 @@ async function saveScore() {
     scores[mirrorKey] = {
       result: mirrorResult,
       playerScores: mirrorScores,
+      points: [pts1, pts0],
       notes: scores[currentScoreKey].notes,
       hasImages: scores[currentScoreKey].hasImages,
       savedAt: new Date().toISOString()
