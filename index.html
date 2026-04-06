@@ -32,20 +32,38 @@
   .hero::before { content: ''; position: absolute; inset: 0; background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.02'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"); pointer-events: none; }
   .hero-inner { max-width: 900px; margin: 0 auto; position: relative; }
 
-  /* ── TEAM TABS ── */
-  .team-switcher { display: flex; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.2) transparent; border-radius: var(--radius-lg) var(--radius-lg) 0 0; gap: 0; }
-  .team-switcher::-webkit-scrollbar { height: 4px; }
-  .team-switcher::-webkit-scrollbar-track { background: transparent; }
-  .team-switcher::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
-  .team-tab { font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; padding: 10px 18px; border: none; background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.55); cursor: pointer; transition: all 0.2s; white-space: nowrap; flex-shrink: 0; }
-  .team-tab:hover { background: rgba(255,255,255,0.14); color: rgba(255,255,255,0.85); }
-  .team-tab.active { background: var(--bg); color: var(--green-dark); }
+  /* ── SIDEBAR + CONTENT LAYOUT ── */
+  .app-layout { display: flex; min-height: calc(100vh - 200px); }
+  .team-sidebar { width: 180px; background: var(--green-dark); color: white; flex-shrink: 0; overflow-y: auto; position: sticky; top: 0; height: 100vh; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.15) transparent; }
+  .team-sidebar::-webkit-scrollbar { width: 4px; }
+  .team-sidebar::-webkit-scrollbar-track { background: transparent; }
+  .team-sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+  .sidebar-header { padding: 16px 14px 12px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+  .sidebar-title { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold-light); font-weight: 500; }
+  .app-content { flex: 1; min-width: 0; }
+
+  /* ── TEAM TABS (sidebar) ── */
+  .team-switcher { display: flex; flex-direction: column; padding: 6px 0; }
+  .team-tab { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; padding: 8px 14px; border: none; background: transparent; color: rgba(255,255,255,0.55); cursor: pointer; transition: all 0.15s; white-space: nowrap; text-align: left; display: flex; align-items: center; gap: 6px; border-left: 3px solid transparent; }
+  .team-tab:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.85); }
+  .team-tab.active { background: rgba(255,255,255,0.12); color: white; border-left-color: var(--gold); }
   .team-tab:focus-visible { outline: 2px solid var(--gold-light); outline-offset: -2px; }
-  .team-tab .tab-num { font-family: 'Playfair Display', Georgia, serif; font-size: 17px; font-weight: 700; margin-right: 4px; }
-  .team-tab .tab-names { font-size: 11px; opacity: 0.85; }
-  .team-tab.tab-standings { padding: 10px 20px; }
-  .team-tab.tab-divider { width: 1px; background: rgba(255,255,255,0.12); padding: 0; cursor: default; flex-shrink: 0; min-width: 1px; }
-  .team-tab.tab-divider:hover { background: rgba(255,255,255,0.12); }
+  .team-tab .tab-num { font-family: 'Playfair Display', Georgia, serif; font-size: 15px; font-weight: 700; min-width: 22px; }
+  .team-tab .tab-names { font-size: 10px; opacity: 0.7; overflow: hidden; text-overflow: ellipsis; }
+  .team-tab.tab-standings { padding: 10px 14px; border-left: 3px solid transparent; }
+  .team-tab.tab-standings .tab-names { font-size: 12px; font-weight: 500; opacity: 1; }
+  .team-tab.tab-divider { height: 1px; background: rgba(255,255,255,0.1); padding: 0; cursor: default; min-height: 1px; border-left: none; margin: 4px 14px; width: auto; }
+  .team-tab.tab-divider:hover { background: rgba(255,255,255,0.1); }
+
+  /* ── MOBILE SIDEBAR → dropdown ── */
+  .mobile-team-select { display: none; }
+  .mobile-team-btn { font-family: 'DM Sans', sans-serif; width: 100%; padding: 10px 16px; border: 1px solid rgba(255,255,255,0.2); border-radius: var(--radius); background: rgba(255,255,255,0.08); color: white; font-size: 14px; font-weight: 500; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+  .mobile-team-btn:hover { background: rgba(255,255,255,0.14); }
+  .mobile-team-dropdown { display: none; position: absolute; top: 100%; left: 0; right: 0; background: var(--green-dark); border: 1px solid rgba(255,255,255,0.15); border-radius: 0 0 var(--radius) var(--radius); max-height: 50vh; overflow-y: auto; z-index: 100; }
+  .mobile-team-dropdown.open { display: block; }
+  .mobile-team-option { font-family: 'DM Sans', sans-serif; width: 100%; padding: 10px 16px; border: none; background: transparent; color: rgba(255,255,255,0.7); font-size: 13px; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 8px; }
+  .mobile-team-option:hover { background: rgba(255,255,255,0.1); color: white; }
+  .mobile-team-option.active { color: var(--gold-light); font-weight: 500; }
 
   .team-panel { display: none; }
   .team-panel.active { display: block; }
@@ -299,6 +317,12 @@
      RESPONSIVE — MOBILE FIXES
      ═══════════════════════════════════════════ */
 
+  @media (max-width: 768px) {
+    .team-sidebar { display: none; }
+    .mobile-team-select { display: block; }
+    .app-layout { flex-direction: column; }
+  }
+
   @media (max-width: 640px) {
     .hero { padding: 1.5rem 1rem 0; }
     .hero-title { font-size: 1.6rem; }
@@ -307,9 +331,6 @@
     .stat-card { padding: 6px 12px; }
     .stat-num { font-size: 17px; }
     .stat-label { font-size: 9px; }
-
-    .team-tab { padding: 10px 16px; font-size: 13px; }
-    .team-tab .tab-num { font-size: 15px; }
 
     .main { padding: 1.25rem 0.75rem 3rem; }
 
@@ -346,8 +367,6 @@
 
   @media (max-width: 380px) {
     .hero { padding: 1rem 0.75rem 0; }
-    .team-tab { padding: 8px 12px; font-size: 12px; }
-    .team-tab .tab-num { font-size: 14px; margin-right: 4px; }
     .hero-stats { gap: 4px; }
     .stat-card { padding: 5px 8px; }
     .data-btn svg { display: none; }
@@ -435,6 +454,20 @@
   </div>
 </noscript>
 
+<!-- ═══ APP LAYOUT ═══ -->
+<div class="app-layout">
+
+<!-- ═══ SIDEBAR ═══ -->
+<aside class="team-sidebar" id="team-sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-title">2026 FTIG Golf League — B-Flight</div>
+  </div>
+  <nav class="team-switcher" role="tablist" aria-label="Team selector" id="team-tabs"></nav>
+</aside>
+
+<!-- ═══ MAIN AREA ═══ -->
+<div class="app-content">
+
 <!-- ═══ HERO / HEADER ═══ -->
 <header class="hero" role="banner">
   <div class="user-bar" id="user-bar" style="display:none;">
@@ -447,10 +480,14 @@
     </div>
   </div>
   <div class="hero-inner">
-    <p class="hero-eyebrow" style="font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:var(--gold-light);margin-bottom:16px;font-weight:500;">2026 FTIG Golf League — B-Flight</p>
-
-    <!-- Team Tabs (generated dynamically) -->
-    <nav class="team-switcher" role="tablist" aria-label="Team selector" id="team-tabs"></nav>
+    <!-- Mobile team selector (shown on small screens) -->
+    <div class="mobile-team-select" id="mobile-team-select" style="position:relative;margin-bottom:12px;">
+      <button class="mobile-team-btn" id="mobile-team-btn" onclick="toggleMobileTeamMenu()">
+        <span id="mobile-team-label">Standings</span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="mobile-team-dropdown" id="mobile-team-dropdown"></div>
+    </div>
 
     <!-- Hero panels (generated dynamically) -->
     <div id="hero-panels"></div>
@@ -490,7 +527,10 @@
 
 </main>
 
-<footer role="contentinfo">2026 FTIG Golf League — B-Flight &bull; Team 15: Amman &bull; Simon &bull; Team 11: Gettler &bull; Eisenhauer</footer>
+<footer role="contentinfo">2026 FTIG Golf League — B-Flight</footer>
+
+</div><!-- /app-content -->
+</div><!-- /app-layout -->
 
 <!-- ═══ CONTACT MODAL ═══ -->
 <div class="modal-overlay" id="contact-overlay" role="dialog" aria-modal="true" aria-labelledby="contact-name" onclick="if(event.target===this)closeContact()">
@@ -1173,6 +1213,18 @@ function buildNavAndPanels() {
   tabsContainer.innerHTML = tabsHTML;
   heroPanels.innerHTML = heroHTML;
   mainPanels.innerHTML = panelHTML;
+
+  // Build mobile dropdown options
+  const mobileDD = document.getElementById('mobile-team-dropdown');
+  if (mobileDD) {
+    let mobileHTML = `<button class="mobile-team-option active" data-team="standings" onclick="switchTeam('standings', document.getElementById('tab-standings'))">Standings</button>`;
+    ALL_TEAM_NUMS.forEach(num => {
+      const team = TEAMS[num];
+      const names = team ? team.players.map(p => p.name.split(',')[0]).join(' / ') : '';
+      mobileHTML += `<button class="mobile-team-option" data-team="${num}" onclick="switchTeam(${num}, document.getElementById('tab-${num}'))">Team ${num} \u2014 ${names}</button>`;
+    });
+    mobileDD.innerHTML = mobileHTML;
+  }
 
   // Build schedule content for all team panels
   ALL_TEAM_NUMS.forEach(num => buildTeamPanel(num));
@@ -1858,9 +1910,38 @@ function switchTeam(num, btn) {
   document.querySelectorAll('.team-panel').forEach(p => p.classList.remove('active'));
   document.getElementById('hero-'+num).classList.add('active');
   document.getElementById('panel-'+num).classList.add('active');
-  // Scroll the active tab into view
-  btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  // Scroll the active tab into view in sidebar
+  btn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  // Update mobile dropdown label
+  const mobileLabel = document.getElementById('mobile-team-label');
+  if (mobileLabel) {
+    if (num === 'standings') {
+      mobileLabel.textContent = 'Standings';
+    } else {
+      const team = TEAMS[num];
+      mobileLabel.textContent = 'Team ' + num + (team ? ' \u2014 ' + team.players.map(p => p.name.split(',')[0]).join(' / ') : '');
+    }
+  }
+  // Update mobile dropdown active state
+  document.querySelectorAll('.mobile-team-option').forEach(o => o.classList.remove('active'));
+  const mobileOpt = document.querySelector(`.mobile-team-option[data-team="${num}"]`);
+  if (mobileOpt) mobileOpt.classList.add('active');
+  // Close mobile dropdown
+  const dd = document.getElementById('mobile-team-dropdown');
+  if (dd) dd.classList.remove('open');
 }
+
+function toggleMobileTeamMenu() {
+  document.getElementById('mobile-team-dropdown').classList.toggle('open');
+}
+
+// Close mobile dropdown when clicking outside
+document.addEventListener('click', e => {
+  const sel = document.getElementById('mobile-team-select');
+  if (sel && !sel.contains(e.target)) {
+    document.getElementById('mobile-team-dropdown').classList.remove('open');
+  }
+});
 
 // ── FILTERS ──
 function setFilter(filter, btn, teamNum) {
