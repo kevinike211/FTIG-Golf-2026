@@ -1155,7 +1155,7 @@ function buildStandingsPanel() {
   if (!panel) return;
   panel.innerHTML = `<h2 class="section-heading"><span class="dot" aria-hidden="true"></span>League Standings</h2>
     <div class="standings-section"><div class="table-wrapper"><table class="standings-table" aria-label="League standings">
-      <thead><tr><th class="num-col">Rank</th><th class="num-col">#</th><th>Team</th><th class="num-col">W</th><th class="num-col">L</th><th class="num-col">T</th><th>Pct</th><th class="num-col">Avg</th></tr></thead>
+      <thead><tr><th class="num-col">Rank</th><th class="num-col">#</th><th>Team</th><th class="num-col">W</th><th class="num-col">L</th><th class="num-col">T</th><th>Pct</th><th class="num-col">Pts</th><th class="num-col">Avg</th></tr></thead>
       <tbody id="standings-body"></tbody>
     </table></div></div>`;
 }
@@ -1254,9 +1254,10 @@ function buildStandings() {
     const played = w + l + ti;
     const pct = played > 0 ? (w + ti * 0.5) / played : 0;
     const avg = scoreCount > 0 ? totalScore / scoreCount : null;
+    const pts = scoreCount > 0 ? totalScore : null;
     const team = TEAMS[t];
     const names = team ? team.players.map(p => p.name.split(',')[0]).join(' / ') : '';
-    return { num: t, w, l, ti, played, pct, avg, names };
+    return { num: t, w, l, ti, played, pct, avg, pts, names };
   });
 
   // Sort: by win pct desc, then wins desc, then fewer losses
@@ -1279,6 +1280,7 @@ function buildStandings() {
       <td class="num-col">${s.l}</td>
       <td class="num-col">${s.ti}</td>
       <td><span class="standings-pct">${pctStr}</span><span class="standings-bar"><span class="standings-bar-fill" style="width:${barWidth}%"></span></span></td>
+      <td class="num-col">${s.pts !== null ? s.pts : '\u2014'}</td>
       <td class="num-col">${s.avg !== null ? s.avg.toFixed(1) : '\u2014'}</td>
     </tr>`;
   });
