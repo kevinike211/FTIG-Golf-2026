@@ -165,6 +165,24 @@
   .result-pending { background: #e8eef4; color: #4a6785; }
   .result-auto-msg { font-size: 12px; color: var(--text-muted); font-style: italic; padding: 8px 0; }
 
+  /* ── RESCHEDULE ── */
+  .resched-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 2px; opacity: 0.5; transition: all 0.15s; vertical-align: middle; margin-left: 4px; }
+  .resched-btn:hover { opacity: 1; color: var(--gold); }
+  .resched-btn:focus-visible { outline: 2px solid var(--green-light); opacity: 1; }
+  .resched-btn svg { width: 14px; height: 14px; display: block; }
+  .resched-badge { display: inline-block; font-size: 10px; font-weight: 500; padding: 2px 8px; border-radius: 999px; background: #fff3cd; color: #856404; margin-left: 6px; vertical-align: middle; }
+  .resched-new-date { font-size: 11px; color: var(--gold); font-weight: 500; display: block; margin-top: 2px; }
+  .resched-note { font-size: 11px; color: var(--text-muted); font-style: italic; }
+  tr.rescheduled { background: rgba(255,243,205,0.3) !important; }
+  .resched-modal { background: white; border-radius: var(--radius-lg); width: 90%; max-width: 400px; box-shadow: var(--shadow-lg); overflow: hidden; transform: translateY(20px); transition: transform 0.25s; }
+  .modal-overlay.open .resched-modal { transform: translateY(0); }
+  .resched-modal-header { background: var(--gold); color: var(--green-dark); padding: 1.25rem 1.5rem; position: relative; }
+  .resched-modal-body { padding: 1.25rem 1.5rem; }
+  .resched-input { font-family: 'DM Sans', sans-serif; width: 100%; padding: 8px 12px; border: 1px solid var(--border-dark); border-radius: var(--radius); font-size: 14px; margin-bottom: 10px; }
+  .resched-input:focus { border-color: var(--green-light); outline: none; box-shadow: 0 0 0 3px rgba(74,140,92,0.12); }
+  .resched-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+  .resched-remove { margin-right: auto; font-family: 'DM Sans', sans-serif; font-size: 12px; padding: 6px 14px; border-radius: 999px; border: 1px solid #f0a0a0; background: #fde8e8; color: #a32d2d; cursor: pointer; }
+
   /* ── POINTS ENTRY ── */
   .points-entry { margin-top: 0.25rem; }
   .points-row { display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; }
@@ -625,6 +643,28 @@
   </div>
 </div>
 
+<!-- Reschedule Modal -->
+<div class="modal-overlay" id="resched-overlay" onclick="if(event.target===this)closeResched()">
+  <div class="resched-modal">
+    <div class="resched-modal-header">
+      <div class="modal-eyebrow" id="resched-eyebrow">Reschedule</div>
+      <div class="modal-team-name" id="resched-title" style="font-size:18px;"></div>
+      <button class="modal-close" onclick="closeResched()" style="color:var(--green-dark);">&times;</button>
+    </div>
+    <div class="resched-modal-body">
+      <div class="score-section-label">New Date</div>
+      <input type="date" class="resched-input" id="resched-date">
+      <div class="score-section-label">Reason (optional)</div>
+      <input type="text" class="resched-input" id="resched-reason" placeholder="e.g., rain, scheduling conflict...">
+      <div class="resched-footer">
+        <button class="resched-remove" id="resched-remove-btn" onclick="removeResched()" style="display:none;">Remove</button>
+        <button class="btn-cancel" onclick="closeResched()">Cancel</button>
+        <button class="btn-save" onclick="saveResched()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Clear All Confirmation Modal -->
 <div class="confirm-overlay" id="confirm-overlay" onclick="if(event.target===this)closeClearConfirm()">
   <div class="confirm-modal">
@@ -833,6 +873,100 @@ async function saveScoreToFirestore(key, data) {
 
 async function deleteScoreFromFirestore(key) {
   await db.collection('scores').doc(key).delete();
+}
+
+// ── RESCHEDULE DATA ──
+let reschedules = {};
+let currentReschedKey = null;
+
+function listenToReschedules() {
+  db.collection('reschedules').onSnapshot(snapshot => {
+    reschedules = {};
+    snapshot.forEach(doc => { reschedules[doc.id] = doc.data(); });
+    renderAllScores();
+  });
+}
+
+function openResched(key) {
+  currentReschedKey = key;
+  const parts = key.split('-');
+  const teamNum = parts[0];
+  const dateStr = parts.slice(1).join('-');
+  const row = document.querySelector(`tr[data-key="${key}"]`);
+  const oppLink = row ? row.querySelector('.opp-link') : null;
+  const oppTxt = oppLink ? oppLink.textContent : '';
+
+  document.getElementById('resched-eyebrow').textContent = 'Team ' + teamNum + ' \u2014 ' + formatDate(dateStr);
+  document.getElementById('resched-title').textContent = 'vs ' + oppTxt;
+
+  const existing = reschedules[key];
+  if (existing) {
+    document.getElementById('resched-date').value = existing.newDate || '';
+    document.getElementById('resched-reason').value = existing.reason || '';
+    document.getElementById('resched-remove-btn').style.display = 'inline-block';
+  } else {
+    document.getElementById('resched-date').value = '';
+    document.getElementById('resched-reason').value = '';
+    document.getElementById('resched-remove-btn').style.display = 'none';
+  }
+
+  document.getElementById('resched-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeResched() {
+  document.getElementById('resched-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+  currentReschedKey = null;
+}
+
+async function saveResched() {
+  if (!currentReschedKey) return;
+  const newDate = document.getElementById('resched-date').value;
+  const reason = document.getElementById('resched-reason').value.trim();
+  if (!newDate) { showToast('Please select a new date'); return; }
+
+  const parts = currentReschedKey.split('-');
+  const teamNum = parseInt(parts[0]);
+  const dateStr = parts.slice(1).join('-');
+
+  const data = { newDate, reason, savedAt: new Date().toISOString() };
+
+  // Save for both teams (primary and mirror)
+  const schedule = TEAM_SCHEDULES[teamNum];
+  const match = schedule ? schedule.find(m => m.d === dateStr) : null;
+  const mirrorKey = match ? match.o + '-' + dateStr : null;
+
+  try {
+    const batch = db.batch();
+    batch.set(db.collection('reschedules').doc(currentReschedKey), data);
+    if (mirrorKey) batch.set(db.collection('reschedules').doc(mirrorKey), data);
+    await batch.commit();
+  } catch(e) { console.error('Reschedule save failed', e); }
+
+  closeResched();
+  showToast('Match rescheduled \u2713');
+}
+
+async function removeResched() {
+  if (!currentReschedKey) return;
+  const parts = currentReschedKey.split('-');
+  const teamNum = parseInt(parts[0]);
+  const dateStr = parts.slice(1).join('-');
+
+  const schedule = TEAM_SCHEDULES[teamNum];
+  const match = schedule ? schedule.find(m => m.d === dateStr) : null;
+  const mirrorKey = match ? match.o + '-' + dateStr : null;
+
+  try {
+    const batch = db.batch();
+    batch.delete(db.collection('reschedules').doc(currentReschedKey));
+    if (mirrorKey) batch.delete(db.collection('reschedules').doc(mirrorKey));
+    await batch.commit();
+  } catch(e) { console.error('Reschedule remove failed', e); }
+
+  closeResched();
+  showToast('Reschedule removed');
 }
 
 function listenToScores() {
@@ -1249,10 +1383,28 @@ function renderAllScores() {
     const key = row.dataset.key;
     const cell = document.getElementById('sc-' + key) || row.querySelector('.score-cell');
     if (!cell) return;
-    // Ensure the cell has the right id for detail rows too
     if (!cell.id) cell.id = 'sc-' + key + '-detail';
     const score = scores[key];
     const editable = canEditMatch(key);
+    const resched = reschedules[key];
+
+    // Show reschedule info on date cell
+    const dateCell = row.querySelector('.date-col');
+    if (dateCell) {
+      // Strip any previous reschedule markup
+      const origDate = dateCell.textContent.replace(/\u25b6 NOW /,'').replace(/Rescheduled.*$/,'').replace(/\u2192.*$/,'').trim();
+      if (resched) {
+        row.classList.add('rescheduled');
+        const newDateFmt = formatDate(resched.newDate);
+        dateCell.innerHTML = `${origDate}<span class="resched-badge">Rescheduled</span><span class="resched-new-date">\u2192 ${newDateFmt}</span>${resched.reason ? '<span class="resched-note">' + resched.reason + '</span>' : ''}`;
+      } else {
+        row.classList.remove('rescheduled');
+        // Only reset if it was previously rescheduled (has badge markup)
+        if (dateCell.querySelector('.resched-badge')) {
+          dateCell.textContent = origDate;
+        }
+      }
+    }
     if (score) {
       const isPending = score.result === 'pending';
       let label = isPending ? 'Pending' : score.result === 'win' ? 'Win' : score.result === 'loss' ? 'Loss' : 'Tie';
@@ -1263,16 +1415,18 @@ function renderAllScores() {
       }
       let scoreStr = scoreParts.length ? ' \u00b7 ' + scoreParts.join(' / ') : '';
       const cameraIcon = score.hasImages ? '<span class="has-images-icon" title="Has photos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg></span>' : '';
+      const reschedBtn = editable ? `<button class="resched-btn" onclick="event.stopPropagation();openResched('${key}')" aria-label="Reschedule match" title="Reschedule"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></button>` : '';
       if (editable) {
-        cell.innerHTML = `<button class="result-badge ${cls}" onclick="openScore('${key}')" aria-label="Edit result: ${label}${scoreStr}">${label}${scoreStr}</button>${cameraIcon}`;
+        cell.innerHTML = `<button class="result-badge ${cls}" onclick="openScore('${key}')" aria-label="Edit result: ${label}${scoreStr}">${label}${scoreStr}</button>${cameraIcon}${reschedBtn}`;
       } else {
         cell.innerHTML = `<span class="result-badge ${cls}" style="cursor:default;">${label}${scoreStr}</span>${cameraIcon}`;
       }
       row.style.background = isPending ? 'rgba(200,215,235,0.3)' : score.result === 'win' ? 'rgba(220,245,228,0.5)' : score.result === 'loss' ? 'rgba(253,232,232,0.5)' : 'rgba(253,246,227,0.35)';
       row.dataset.scored = isPending ? 'false' : 'true';
     } else {
+      const reschedBtn = editable ? `<button class="resched-btn" onclick="event.stopPropagation();openResched('${key}')" aria-label="Reschedule match" title="Reschedule"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></button>` : '';
       if (editable) {
-        cell.innerHTML = `<button class="score-entry-btn" onclick="openScore('${key}')" aria-label="Add result for this match">+ Add result</button>`;
+        cell.innerHTML = `<button class="score-entry-btn" onclick="openScore('${key}')" aria-label="Add result for this match">+ Add result</button>${reschedBtn}`;
       } else {
         cell.innerHTML = '<span style="color:var(--text-muted);font-size:12px;">&mdash;</span>';
       }
@@ -1983,6 +2137,7 @@ document.addEventListener('keydown', e => {
   if (e.key==='Escape') {
     if (document.getElementById('lightbox-overlay').classList.contains('open')) { closeLightbox(); return; }
     if (document.getElementById('confirm-overlay').classList.contains('open')) { closeClearConfirm(); return; }
+    if (document.getElementById('resched-overlay').classList.contains('open')) { closeResched(); return; }
     closeAdminPanel();
     closeScore(); closeContact();
   }
@@ -2041,7 +2196,8 @@ auth.onAuthStateChanged(async (user) => {
         if (teamTab) switchTeam(userTeamNum, teamTab);
       }
       ImageStore.init().then(() => {
-        listenToScores(); // This replaces the old loadScores + renderAllScores
+        listenToScores();
+        listenToReschedules();
         highlightDates();
       });
     } else {
