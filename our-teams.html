@@ -3,16 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="2026 FTIG Golf League B-Flight scorekeeping for all 24 teams">
+<meta name="description" content="2026 FTIG Golf League B-Flight — Teams 11, 15 & 16">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#9971;</text></svg>">
-<title>2026 FTIG Golf League — B-Flight</title>
+<title>2026 FTIG Golf League — Our Teams</title>
 
 <!-- PWA -->
-<link rel="manifest" href="manifest.json">
+<link rel="manifest" href="manifest-our-teams.json">
 <meta name="theme-color" content="#1a3a2a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="FTIG Golf">
+<meta name="apple-mobile-web-app-title" content="FTIG Golf 3 Teams">
 <link rel="apple-touch-icon" href="icon-192.png">
 <script>
   if ('serviceWorker' in navigator) {
@@ -560,7 +560,7 @@
 
 </main>
 
-<footer role="contentinfo">2026 FTIG Golf League — B-Flight</footer>
+<footer role="contentinfo">2026 FTIG Golf League — B-Flight &bull; Teams 11, 15 &amp; 16</footer>
 
 </div><!-- /app-content -->
 </div><!-- /app-layout -->
@@ -749,7 +749,7 @@ const TEAMS = {
   24: { players:[{name:'Cousins, Scott',phone:'570-401-6499'},{name:'Nace, Mark',phone:'717-269-8969'}] }
 };
 
-const ALL_TEAM_NUMS = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24];
+const ALL_TEAM_NUMS = [11,15,16];
 
 const TEAM_SCHEDULES = {
   1: [{d:'2026-04-16',c:'manada',o:24},{d:'2026-04-23',c:'blue',o:23},{d:'2026-04-30',c:'manada',o:22},{d:'2026-05-07',c:'blue',o:21},{d:'2026-05-14',c:'manada',o:20},{d:'2026-05-21',c:'blue',o:19},{d:'2026-06-04',c:'manada',o:18},{d:'2026-06-11',c:'blue',o:17},{d:'2026-06-18',c:'manada',o:16},{d:'2026-06-25',c:'blue',o:15},{d:'2026-07-09',c:'manada',o:14},{d:'2026-07-16',c:'blue',o:13},{d:'2026-07-23',c:'manada',o:12},{d:'2026-07-30',c:'blue',o:11},{d:'2026-08-06',c:'manada',o:10}],
@@ -1347,7 +1347,7 @@ function buildNavAndPanels() {
   heroHTML += `<div class="team-panel active" id="hero-standings" role="tabpanel" aria-labelledby="tab-standings">
     <div class="hero-info">
       <h1 class="hero-title">Standings</h1>
-      <p class="hero-subtitle">24 teams \u2022 B-Flight \u00b7 April 16 \u2013 September 14, 2026</p>
+      <p class="hero-subtitle">Teams 11, 15 &amp; 16 \u2022 B-Flight \u00b7 April 16 \u2013 September 14, 2026</p>
     </div>
   </div>`;
   panelHTML += `<section class="team-panel active" id="panel-standings" role="tabpanel" aria-labelledby="tab-standings"></section>`;
