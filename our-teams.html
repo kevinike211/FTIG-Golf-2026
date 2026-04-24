@@ -436,6 +436,21 @@
   .admin-modal-body { padding: 1.25rem 1.5rem; overflow-y: auto; flex: 1; }
   .admin-user-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
   .admin-user-row:last-child { border-bottom: none; }
+  .admin-section { margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 2px solid var(--border); }
+  .admin-section:last-child { border-bottom: none; padding-bottom: 0; margin-bottom: 0; }
+  .admin-section-title { font-family: 'Playfair Display', Georgia, serif; font-size: 17px; font-weight: 700; color: var(--green-dark); margin-bottom: 4px; }
+  .admin-section-hint { font-size: 12px; color: var(--text-muted); margin-bottom: 12px; }
+  .admin-visible-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px; margin-bottom: 12px; }
+  .admin-visible-item { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; font-size: 12px; transition: background 0.12s; }
+  .admin-visible-item:hover { background: var(--green-pale); }
+  .admin-visible-item input { margin: 0; cursor: pointer; flex-shrink: 0; }
+  .admin-visible-num { font-family: 'Playfair Display', Georgia, serif; font-weight: 700; color: var(--green-dark); }
+  .admin-visible-names { color: var(--text-secondary); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .admin-visible-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .admin-mini-btn { font-family: 'DM Sans', sans-serif; font-size: 12px; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--border-dark); background: white; color: var(--text-secondary); cursor: pointer; }
+  .admin-mini-btn:hover { background: var(--green-pale); border-color: var(--green-light); color: var(--green-dark); }
+  .admin-save-btn { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; padding: 6px 18px; border-radius: 999px; border: none; background: var(--green-dark); color: white; cursor: pointer; margin-left: auto; }
+  .admin-save-btn:hover { background: var(--green-mid); }
   .admin-user-name { font-weight: 500; font-size: 14px; flex: 1; min-width: 120px; }
   .admin-user-email { font-size: 12px; color: var(--text-muted); flex: 1; min-width: 150px; }
   .admin-user-role { font-size: 12px; }
@@ -560,7 +575,7 @@
 
 </main>
 
-<footer role="contentinfo">2026 FTIG Golf League — B-Flight &bull; Teams 11, 15 &amp; 16</footer>
+<footer role="contentinfo">2026 FTIG Golf League — B-Flight</footer>
 
 </div><!-- /app-content -->
 </div><!-- /app-layout -->
@@ -749,7 +764,16 @@ const TEAMS = {
   24: { players:[{name:'Cousins, Scott',phone:'570-401-6499'},{name:'Nace, Mark',phone:'717-269-8969'}] }
 };
 
-const ALL_TEAM_NUMS = [11,15,16];
+const ALL_TEAM_NUMS = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24];
+// Admin-controlled list of teams visible in the UI. Defaults to all 24 until config loads.
+let visibleTeams = ALL_TEAM_NUMS.slice();
+try {
+  const cached = localStorage.getItem('ftig_visible_teams');
+  if (cached) {
+    const parsed = JSON.parse(cached);
+    if (Array.isArray(parsed) && parsed.length) visibleTeams = parsed;
+  }
+} catch(e) {}
 
 const TEAM_SCHEDULES = {
   1: [{d:'2026-04-16',c:'manada',o:24},{d:'2026-04-23',c:'blue',o:23},{d:'2026-04-30',c:'manada',o:22},{d:'2026-05-07',c:'blue',o:21},{d:'2026-05-14',c:'manada',o:20},{d:'2026-05-21',c:'blue',o:19},{d:'2026-06-04',c:'manada',o:18},{d:'2026-06-11',c:'blue',o:17},{d:'2026-06-18',c:'manada',o:16},{d:'2026-06-25',c:'blue',o:15},{d:'2026-07-09',c:'manada',o:14},{d:'2026-07-16',c:'blue',o:13},{d:'2026-07-23',c:'manada',o:12},{d:'2026-07-30',c:'blue',o:11},{d:'2026-08-06',c:'manada',o:10}],
@@ -996,6 +1020,39 @@ function listenToScores() {
   });
 }
 
+// Listen to visible-teams config (admin-controlled, applies to all users)
+function listenToConfig() {
+  db.collection('config').doc('visibleTeams').onSnapshot(doc => {
+    const data = doc.exists ? doc.data() : null;
+    const newVisible = data && Array.isArray(data.teams) && data.teams.length ? data.teams : ALL_TEAM_NUMS.slice();
+    const changed = JSON.stringify(newVisible) !== JSON.stringify(visibleTeams);
+    visibleTeams = newVisible;
+    localStorage.setItem('ftig_visible_teams', JSON.stringify(visibleTeams));
+    if (changed && appInitialized) {
+      // Rebuild nav/panels since the visible list changed
+      buildNavAndPanels();
+      // Switch to standings or first visible team since current tab may be hidden
+      const currentTab = document.querySelector('.team-tab.active');
+      if (!currentTab || !document.getElementById(currentTab.id)) {
+        const standingsTab = document.getElementById('tab-standings');
+        if (standingsTab) switchTeam('standings', standingsTab);
+      }
+      renderAllScores();
+      highlightDates();
+    }
+  });
+}
+
+async function saveVisibleTeams(teams) {
+  try {
+    await db.collection('config').doc('visibleTeams').set({ teams: teams, updatedAt: new Date().toISOString() });
+    showToast('Visible teams updated');
+  } catch(e) {
+    console.error('Failed to save visible teams', e);
+    showToast('Failed to save');
+  }
+}
+
 // ── AUTH FUNCTIONS ──
 async function doLogin() {
   const email = document.getElementById('auth-email').value.trim();
@@ -1075,7 +1132,32 @@ function canEditMatch(key) {
 async function openAdminPanel() {
   if (userRole !== 'admin') { showToast('Admin access required'); return; }
   const snapshot = await db.collection('users').get();
-  let html = '<div class="admin-user-list">';
+
+  // Visible Teams section
+  let html = '<div class="admin-section"><h3 class="admin-section-title">Visible Teams</h3>';
+  html += '<p class="admin-section-hint">Toggle which teams appear in tabs and standings for all users.</p>';
+  html += '<div class="admin-visible-grid">';
+  ALL_TEAM_NUMS.forEach(n => {
+    const team = TEAMS[n];
+    const names = team ? team.players.map(p => p.name.split(',')[0]).join(' / ') : '';
+    const checked = visibleTeams.includes(n) ? 'checked' : '';
+    html += '<label class="admin-visible-item">' +
+      '<input type="checkbox" value="' + n + '" ' + checked + ' onchange="onToggleVisible(this)">' +
+      '<span class="admin-visible-num">' + n + '</span>' +
+      '<span class="admin-visible-names">' + names + '</span>' +
+      '</label>';
+  });
+  html += '</div>';
+  html += '<div class="admin-visible-actions">' +
+    '<button class="admin-mini-btn" onclick="selectAllVisible(true)">Select all</button>' +
+    '<button class="admin-mini-btn" onclick="selectAllVisible(false)">Clear all</button>' +
+    '<button class="admin-save-btn" onclick="applyVisibleTeams()">Apply</button>' +
+    '</div>';
+  html += '</div>';
+
+  // Users section
+  html += '<div class="admin-section"><h3 class="admin-section-title">Users</h3>';
+  html += '<div class="admin-user-list">';
   snapshot.forEach(doc => {
     const u = doc.data();
     const uid = doc.id;
@@ -1096,10 +1178,34 @@ async function openAdminPanel() {
       '<select class="admin-select" onchange="updateUserRole(\'' + uid + '\', this.value)">' + teamOptions + '</select>' +
       '</div>';
   });
-  html += '</div>';
+  html += '</div></div>'; // close admin-user-list and admin-section
   document.getElementById('admin-body').innerHTML = html;
   document.getElementById('admin-overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
+}
+
+// Admin visible-teams helpers
+let pendingVisibleTeams = null;
+function onToggleVisible(checkbox) {
+  if (!pendingVisibleTeams) pendingVisibleTeams = visibleTeams.slice();
+  const n = parseInt(checkbox.value);
+  if (checkbox.checked) {
+    if (!pendingVisibleTeams.includes(n)) pendingVisibleTeams.push(n);
+  } else {
+    pendingVisibleTeams = pendingVisibleTeams.filter(x => x !== n);
+  }
+  pendingVisibleTeams.sort((a,b) => a-b);
+}
+function selectAllVisible(on) {
+  pendingVisibleTeams = on ? ALL_TEAM_NUMS.slice() : [];
+  document.querySelectorAll('.admin-visible-item input').forEach(cb => cb.checked = on);
+}
+async function applyVisibleTeams() {
+  const teams = pendingVisibleTeams !== null ? pendingVisibleTeams : visibleTeams.slice();
+  if (!teams.length) { showToast('Select at least one team'); return; }
+  await saveVisibleTeams(teams);
+  pendingVisibleTeams = null;
+  closeAdminPanel();
 }
 
 function closeAdminPanel() {
@@ -1347,13 +1453,14 @@ function buildNavAndPanels() {
   heroHTML += `<div class="team-panel active" id="hero-standings" role="tabpanel" aria-labelledby="tab-standings">
     <div class="hero-info">
       <h1 class="hero-title">Standings</h1>
-      <p class="hero-subtitle">Teams 11, 15 &amp; 16 \u2022 B-Flight \u00b7 April 16 \u2013 September 14, 2026</p>
+      <p class="hero-subtitle">${teamsToShow.length} team${teamsToShow.length === 1 ? '' : 's'} \u2022 B-Flight \u00b7 April 16 \u2013 September 14, 2026</p>
     </div>
   </div>`;
   panelHTML += `<section class="team-panel active" id="panel-standings" role="tabpanel" aria-labelledby="tab-standings"></section>`;
 
-  // All teams sorted by number
-  ALL_TEAM_NUMS.forEach(num => {
+  // Only show visible teams (admin-controlled)
+  const teamsToShow = visibleTeams && visibleTeams.length ? visibleTeams : ALL_TEAM_NUMS;
+  teamsToShow.forEach(num => {
     tabsHTML += teamTabHTML(num);
     heroHTML += teamHeroHTML(num);
     panelHTML += `<section class="team-panel" id="panel-${num}" role="tabpanel" aria-labelledby="tab-${num}"></section>`;
@@ -1363,11 +1470,11 @@ function buildNavAndPanels() {
   heroPanels.innerHTML = heroHTML;
   mainPanels.innerHTML = panelHTML;
 
-  // Build mobile dropdown options
+  // Build mobile dropdown options (only visible teams)
   const mobileDD = document.getElementById('mobile-team-dropdown');
   if (mobileDD) {
     let mobileHTML = `<button class="mobile-team-option active" data-team="standings" onclick="switchTeam('standings', document.getElementById('tab-standings'))">Standings</button>`;
-    ALL_TEAM_NUMS.forEach(num => {
+    teamsToShow.forEach(num => {
       const team = TEAMS[num];
       const names = team ? team.players.map(p => p.name.split(',')[0]).join(' / ') : '';
       mobileHTML += `<button class="mobile-team-option" data-team="${num}" onclick="switchTeam(${num}, document.getElementById('tab-${num}'))">Team ${num} \u2014 ${names}</button>`;
@@ -1375,8 +1482,8 @@ function buildNavAndPanels() {
     mobileDD.innerHTML = mobileHTML;
   }
 
-  // Build schedule content for all team panels
-  ALL_TEAM_NUMS.forEach(num => buildTeamPanel(num));
+  // Build schedule content for visible team panels only
+  teamsToShow.forEach(num => buildTeamPanel(num));
 
   // Build standings panel
   buildStandingsPanel();
@@ -1486,7 +1593,8 @@ function buildStandings() {
   if (!tbody) return;
 
   // Compute stats for each team
-  const standings = ALL_TEAM_NUMS.map(t => {
+  const teamsForStandings = visibleTeams && visibleTeams.length ? visibleTeams : ALL_TEAM_NUMS;
+  const standings = teamsForStandings.map(t => {
     let w=0, l=0, ti=0, totalScore=0, scoreCount=0, totalPts=0;
     const sched = TEAM_SCHEDULES[t];
     if (sched) {
@@ -2213,6 +2321,7 @@ auth.onAuthStateChanged(async (user) => {
       ImageStore.init().then(() => {
         listenToScores();
         listenToReschedules();
+        listenToConfig();
         highlightDates();
       });
     } else {
