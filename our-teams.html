@@ -202,7 +202,7 @@
   .points-entry { margin-top: 0.25rem; }
   .points-row { display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; }
   .points-block { flex: 1; min-width: 90px; }
-  .points-input { width: 60px; }
+  .points-input { width: 70px; }
   .points-total { display: flex; align-items: center; gap: 4px; font-size: 13px; padding-bottom: 6px; }
   .points-total-label { color: var(--text-muted); }
   .points-total-num { font-weight: 700; color: var(--green-dark); font-size: 16px; }
@@ -622,11 +622,11 @@
         <div class="points-row">
           <div class="points-block">
             <label class="score-player-name" id="pts-label-0" for="pts-0">Team</label>
-            <input class="score-input points-input" type="number" min="0" max="9" placeholder="0" id="pts-0" oninput="validatePoints();autoSelectResult()">
+            <input class="score-input points-input" type="number" min="0" max="9" step="0.5" placeholder="0" id="pts-0" oninput="validatePoints();autoSelectResult()">
           </div>
           <div class="points-block">
             <label class="score-player-name" id="pts-label-1" for="pts-1">Opponent</label>
-            <input class="score-input points-input" type="number" min="0" max="9" placeholder="0" id="pts-1" oninput="validatePoints();autoSelectResult()">
+            <input class="score-input points-input" type="number" min="0" max="9" step="0.5" placeholder="0" id="pts-1" oninput="validatePoints();autoSelectResult()">
           </div>
           <div class="points-total">
             <span class="points-total-label">Total:</span>
@@ -1810,9 +1810,9 @@ function selectResult(r) {
 function validatePoints() {
   const p0 = document.getElementById('pts-0');
   const p1 = document.getElementById('pts-1');
-  const v0 = p0 && p0.value ? parseInt(p0.value) : 0;
-  const v1 = p1 && p1.value ? parseInt(p1.value) : 0;
-  const total = v0 + v1;
+  const v0 = p0 && p0.value ? parseFloat(p0.value) : 0;
+  const v1 = p1 && p1.value ? parseFloat(p1.value) : 0;
+  const total = Math.round((v0 + v1) * 2) / 2; // round to nearest 0.5
   const totalEl = document.getElementById('pts-total');
   const errorEl = document.getElementById('pts-error');
   totalEl.textContent = total;
@@ -1830,8 +1830,8 @@ function autoSelectResult() {
   const p0 = document.getElementById('pts-0');
   const p1 = document.getElementById('pts-1');
   if (!p0 || !p1) return;
-  const v0 = p0.value !== '' ? parseInt(p0.value) : null;
-  const v1 = p1.value !== '' ? parseInt(p1.value) : null;
+  const v0 = p0.value !== '' ? parseFloat(p0.value) : null;
+  const v1 = p1.value !== '' ? parseFloat(p1.value) : null;
   if (v0 === null || v1 === null) return;
   if (v0 > v1) selectResult('win');
   else if (v0 < v1) selectResult('loss');
@@ -1846,8 +1846,8 @@ async function saveScore() {
   // Validate points
   const ptsInp0 = document.getElementById('pts-0');
   const ptsInp1 = document.getElementById('pts-1');
-  let pts0 = ptsInp0 && ptsInp0.value !== '' ? parseInt(ptsInp0.value) : null;
-  let pts1 = ptsInp1 && ptsInp1.value !== '' ? parseInt(ptsInp1.value) : null;
+  let pts0 = ptsInp0 && ptsInp0.value !== '' ? parseFloat(ptsInp0.value) : null;
+  let pts1 = ptsInp1 && ptsInp1.value !== '' ? parseFloat(ptsInp1.value) : null;
   if (pts0 !== null && pts1 !== null && pts0 + pts1 > 9) {
     showToast('Combined points cannot exceed 9');
     return;
