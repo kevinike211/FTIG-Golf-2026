@@ -1,5 +1,12 @@
 // Service Worker for FTIG Golf 2026 PWA
-const CACHE_NAME = 'ftig-golf-v2';
+const CACHE_NAME = 'ftig-golf-v3';
+
+// Listen for skip-waiting message from the page (used by the auto-updater)
+self.addEventListener('message', event => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
