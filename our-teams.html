@@ -1447,6 +1447,9 @@ function buildNavAndPanels() {
     </div>`;
   }
 
+  // Only show visible teams (admin-controlled). Declared first so it's available in templates below.
+  const teamsToShow = visibleTeams && visibleTeams.length ? visibleTeams : ALL_TEAM_NUMS;
+
   // Standings tab (first, active by default)
   tabsHTML += `<button class="team-tab tab-standings active" role="tab" aria-selected="true" aria-controls="hero-standings panel-standings" id="tab-standings" onclick="switchTeam('standings',this)"><span class="tab-names" style="font-weight:500;font-size:13px;">Standings</span></button>`;
   tabsHTML += '<div class="team-tab tab-divider" aria-hidden="true"></div>';
@@ -1457,9 +1460,6 @@ function buildNavAndPanels() {
     </div>
   </div>`;
   panelHTML += `<section class="team-panel active" id="panel-standings" role="tabpanel" aria-labelledby="tab-standings"></section>`;
-
-  // Only show visible teams (admin-controlled)
-  const teamsToShow = visibleTeams && visibleTeams.length ? visibleTeams : ALL_TEAM_NUMS;
   teamsToShow.forEach(num => {
     tabsHTML += teamTabHTML(num);
     heroHTML += teamHeroHTML(num);
