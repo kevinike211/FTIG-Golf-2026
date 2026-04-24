@@ -1810,14 +1810,25 @@ function selectResult(r) {
 function validatePoints() {
   const p0 = document.getElementById('pts-0');
   const p1 = document.getElementById('pts-1');
-  const v0 = p0 && p0.value ? parseFloat(p0.value) : 0;
-  const v1 = p1 && p1.value ? parseFloat(p1.value) : 0;
+  const hasV0 = p0 && p0.value !== '';
+  const hasV1 = p1 && p1.value !== '';
+  const v0 = hasV0 ? parseFloat(p0.value) : 0;
+  const v1 = hasV1 ? parseFloat(p1.value) : 0;
   const total = Math.round((v0 + v1) * 2) / 2; // round to nearest 0.5
   const totalEl = document.getElementById('pts-total');
   const errorEl = document.getElementById('pts-error');
   totalEl.textContent = total;
+
+  // Error conditions:
+  //   - total > 9 (always invalid)
+  //   - both scores entered but total != 9 (must sum to exactly 9 when both reported)
   if (total > 9) {
     totalEl.classList.add('over');
+    errorEl.textContent = 'Combined points cannot exceed 9';
+    errorEl.style.display = 'block';
+  } else if (hasV0 && hasV1 && total !== 9) {
+    totalEl.classList.add('over');
+    errorEl.textContent = 'Combined points must equal 9';
     errorEl.style.display = 'block';
   } else {
     totalEl.classList.remove('over');
@@ -1848,9 +1859,16 @@ async function saveScore() {
   const ptsInp1 = document.getElementById('pts-1');
   let pts0 = ptsInp0 && ptsInp0.value !== '' ? parseFloat(ptsInp0.value) : null;
   let pts1 = ptsInp1 && ptsInp1.value !== '' ? parseFloat(ptsInp1.value) : null;
-  if (pts0 !== null && pts1 !== null && pts0 + pts1 > 9) {
-    showToast('Combined points cannot exceed 9');
-    return;
+  if (pts0 !== null && pts1 !== null) {
+    const totalPts = Math.round((pts0 + pts1) * 2) / 2;
+    if (totalPts > 9) {
+      showToast('Combined points cannot exceed 9');
+      return;
+    }
+    if (totalPts !== 9) {
+      showToast('Combined points must equal 9');
+      return;
+    }
   }
 
   const parts = currentScoreKey.split('-');
