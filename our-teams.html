@@ -1940,10 +1940,10 @@ async function scanScorecard(event) {
     const schema = {
       type: 'object',
       properties: {
-        teamAScore: { type: ['integer', 'null'], description: 'Total golf score for Team ' + teamNum },
-        teamBScore: { type: ['integer', 'null'], description: 'Total golf score for Team ' + oppNum },
-        teamAPoints: { type: ['number', 'null'], description: 'Match points for Team ' + teamNum + ' (0-9, may be 0.5 increments)' },
-        teamBPoints: { type: ['number', 'null'], description: 'Match points for Team ' + oppNum + ' (0-9, may be 0.5 increments)' },
+        teamAScore: { type: 'integer', nullable: true, description: 'Total golf score for Team ' + teamNum },
+        teamBScore: { type: 'integer', nullable: true, description: 'Total golf score for Team ' + oppNum },
+        teamAPoints: { type: 'number', nullable: true, description: 'Match points for Team ' + teamNum + ' (0-9, may be 0.5 increments)' },
+        teamBPoints: { type: 'number', nullable: true, description: 'Match points for Team ' + oppNum + ' (0-9, may be 0.5 increments)' },
         confidence: { type: 'string', enum: ['high','medium','low'] },
         notes: { type: 'string', description: 'Brief notes about anything unclear' }
       },
