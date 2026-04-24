@@ -272,6 +272,15 @@
   .score-modal-eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--gold-light); margin-bottom: 2px; }
   .score-modal-title { font-family: 'Playfair Display', Georgia, serif; font-size: 20px; font-weight: 700; }
   .score-modal-body { padding: 1.25rem 1.5rem 1.5rem; max-height: 70vh; overflow-y: auto; }
+  .scan-section { margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px dashed var(--border); }
+  .scan-btn { font-family: 'DM Sans', sans-serif; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 16px; border-radius: var(--radius); border: 1px solid var(--green-light); background: var(--green-pale); color: var(--green-dark); font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
+  .scan-btn:hover { background: var(--green-pale2); border-color: var(--green-dark); }
+  .scan-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .scan-btn:focus-visible { outline: 2px solid var(--green-light); outline-offset: 2px; }
+  .scan-status { font-size: 12px; margin-top: 8px; padding: 8px 12px; border-radius: var(--radius); text-align: center; }
+  .scan-status.info { background: #e8eef4; color: #4a6785; }
+  .scan-status.success { background: var(--win); color: var(--win-text); }
+  .scan-status.error { background: var(--loss); color: var(--loss-text); }
   .score-section-label { font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin: 1rem 0 0.5rem; }
   .score-section-label:first-child { margin-top: 0; }
   .result-selector { display: flex; gap: 8px; }
@@ -623,6 +632,14 @@
       <button class="modal-close" onclick="closeScore()" aria-label="Close score entry dialog">&times;</button>
     </div>
     <div class="score-modal-body">
+      <div class="scan-section">
+        <button type="button" class="scan-btn" onclick="document.getElementById('scan-input').click()" id="scan-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          <span id="scan-btn-text">Scan Scorecard</span>
+        </button>
+        <input type="file" id="scan-input" accept="image/*" capture="environment" style="display:none" onchange="scanScorecard(event)">
+        <div class="scan-status" id="scan-status" style="display:none;"></div>
+      </div>
       <div class="score-section-label" id="result-label">Result</div>
       <div id="result-selector-wrap">
         <div class="result-selector" role="group" aria-labelledby="result-label">
@@ -747,6 +764,11 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
+
+// ── GEMINI API (for scorecard OCR) ──
+const GEMINI_API_KEY = "AIzaSyCiKHCaVGF7Wl5njoz89hAXde9bTsisNRg";
+const GEMINI_MODEL = "gemini-2.0-flash";
+const GEMINI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent?key=' + GEMINI_API_KEY;
 
 // ── AUTH STATE ──
 let currentUser = null;
@@ -1688,6 +1710,7 @@ function openScore(key) {
   previousFocus = document.activeElement;
   currentScoreKey = key;
   currentScoreResult = null;
+  setScanStatus('', null); // clear any previous scan status
 
   const parts = key.split('-');
   const teamNum = parts[0];
@@ -1852,6 +1875,138 @@ function validatePoints() {
   } else {
     totalEl.classList.remove('over');
     errorEl.style.display = 'none';
+  }
+}
+
+// ── SCORECARD SCANNING (Gemini Vision API) ──
+function setScanStatus(msg, kind) {
+  const el = document.getElementById('scan-status');
+  const btnText = document.getElementById('scan-btn-text');
+  const btn = document.getElementById('scan-btn');
+  if (!el) return;
+  if (!msg) { el.style.display = 'none'; el.className = 'scan-status'; return; }
+  el.textContent = msg;
+  el.className = 'scan-status ' + (kind || 'info');
+  el.style.display = 'block';
+  if (btn) btn.disabled = (kind === 'info');
+  if (btnText) btnText.textContent = kind === 'info' ? 'Reading card...' : 'Scan Scorecard';
+}
+
+function fileToResizedBase64(file, maxWidth) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const scale = img.width > maxWidth ? maxWidth / img.width : 1;
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        resolve(dataUrl.split(',')[1]); // strip prefix
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function scanScorecard(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  event.target.value = '';
+
+  // Get team numbers from the modal context
+  const parts = currentScoreKey.split('-');
+  const teamNum = parseInt(parts[0]);
+  const row = document.querySelector('tr[data-key="' + currentScoreKey + '"]');
+  const oppNumCell = row ? row.querySelector('.opp-num-cell') : null;
+  const oppNum = oppNumCell ? parseInt(oppNumCell.textContent.trim()) : null;
+
+  setScanStatus('Reading card...', 'info');
+
+  try {
+    const base64 = await fileToResizedBase64(file, 1600);
+
+    const prompt = 'This is a golf scorecard for a match between Team ' + teamNum + ' and Team ' + oppNum + '. ' +
+      'Read the scorecard carefully and return the total scores and match points for each team. ' +
+      'Total scores are typically in the rightmost column labeled "Total", "Tot", or "T" \u2014 add up each team\'s strokes across the 18 holes. ' +
+      'Match points are typically 0 to 9 per team, with halves allowed (e.g., 4.5). The two teams\' points must sum to exactly 9. ' +
+      'If a value is unclear or missing, return null for that field. Do NOT guess.';
+
+    const schema = {
+      type: 'object',
+      properties: {
+        teamAScore: { type: ['integer', 'null'], description: 'Total golf score for Team ' + teamNum },
+        teamBScore: { type: ['integer', 'null'], description: 'Total golf score for Team ' + oppNum },
+        teamAPoints: { type: ['number', 'null'], description: 'Match points for Team ' + teamNum + ' (0-9, may be 0.5 increments)' },
+        teamBPoints: { type: ['number', 'null'], description: 'Match points for Team ' + oppNum + ' (0-9, may be 0.5 increments)' },
+        confidence: { type: 'string', enum: ['high','medium','low'] },
+        notes: { type: 'string', description: 'Brief notes about anything unclear' }
+      },
+      required: ['teamAScore','teamBScore','teamAPoints','teamBPoints','confidence']
+    };
+
+    const body = {
+      contents: [{
+        parts: [
+          { text: prompt },
+          { inline_data: { mime_type: 'image/jpeg', data: base64 } }
+        ]
+      }],
+      generationConfig: {
+        temperature: 0,
+        responseMimeType: 'application/json',
+        responseSchema: schema
+      }
+    };
+
+    const resp = await fetch(GEMINI_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!resp.ok) {
+      const errText = await resp.text();
+      throw new Error('Gemini API error: ' + resp.status + ' \u2014 ' + errText);
+    }
+    const data = await resp.json();
+    const jsonText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!jsonText) throw new Error('No response from model');
+
+    const parsed = JSON.parse(jsonText);
+
+    // Pre-fill the inputs
+    let filled = [];
+    const isAdmin = userRole === 'admin';
+    const pi0 = document.getElementById('pi-0');
+    const pi1 = document.getElementById('pi-1');
+    const pts0 = document.getElementById('pts-0');
+    const pts1 = document.getElementById('pts-1');
+
+    // Scores (only admins can edit their own team score, members can edit opponent score)
+    if (parsed.teamAScore != null && pi0 && !pi0.disabled) { pi0.value = parsed.teamAScore; filled.push('Team ' + teamNum + ' score'); }
+    if (parsed.teamBScore != null && pi1 && !pi1.disabled) { pi1.value = parsed.teamBScore; filled.push('Team ' + oppNum + ' score'); }
+
+    // Points
+    if (parsed.teamAPoints != null && pts0 && !pts0.disabled) { pts0.value = parsed.teamAPoints; filled.push('Team ' + teamNum + ' pts'); }
+    if (parsed.teamBPoints != null && pts1 && !pts1.disabled) { pts1.value = parsed.teamBPoints; filled.push('Team ' + oppNum + ' pts'); }
+
+    validatePoints();
+    autoSelectResult();
+
+    if (filled.length === 0) {
+      setScanStatus('Could not read any values from the card. Please enter them manually.', 'error');
+    } else {
+      const msg = 'Filled: ' + filled.join(', ') + '. Please verify before saving.' + (parsed.confidence === 'low' ? ' (Low confidence \u2014 double-check!)' : '');
+      setScanStatus(msg, parsed.confidence === 'low' ? 'error' : 'success');
+    }
+  } catch(err) {
+    console.error('Scan failed', err);
+    setScanStatus('Scan failed: ' + (err.message || 'unknown error'), 'error');
   }
 }
 
