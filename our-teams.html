@@ -273,6 +273,29 @@
   .score-modal-title { font-family: 'Playfair Display', Georgia, serif; font-size: 20px; font-weight: 700; }
   .score-modal-body { padding: 1.25rem 1.5rem 1.5rem; max-height: 70vh; overflow-y: auto; }
   .scan-section { margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px dashed var(--border); }
+
+  /* ── CONFIRMATION BANNER ── */
+  .confirm-banner { background: #fff8d6; border: 1px solid #e8c44a; border-radius: var(--radius); padding: 14px; margin-bottom: 1rem; }
+  .confirm-banner-title { font-weight: 600; color: #7a5a00; font-size: 14px; margin-bottom: 6px; }
+  .confirm-banner-values { font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; line-height: 1.5; }
+  .confirm-banner-values strong { color: var(--text-primary); }
+  .confirm-banner-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .confirm-banner-btn { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; padding: 8px 16px; border-radius: 999px; cursor: pointer; border: 1px solid var(--border-dark); }
+  .confirm-banner-btn.primary { background: var(--green-dark); color: white; border-color: var(--green-dark); flex: 1; }
+  .confirm-banner-btn.primary:hover { background: var(--green-mid); }
+  .confirm-banner-btn.secondary { background: white; color: var(--text-secondary); }
+  .confirm-banner-btn.secondary:hover { background: var(--green-pale); border-color: var(--green-light); color: var(--green-dark); }
+
+  /* ── STATUS BANNERS (in score modal) ── */
+  .status-banner { padding: 10px 14px; border-radius: var(--radius); font-size: 13px; margin-bottom: 1rem; }
+  .status-banner.confirmed { background: var(--win); color: var(--win-text); }
+  .status-banner.awaiting { background: #fff8d6; color: #7a5a00; }
+  .status-banner.disputed { background: var(--loss); color: var(--loss-text); }
+
+  /* ── STATUS BADGES (on result cell) ── */
+  .result-awaiting { background: #fff8d6; color: #7a5a00; }
+  .result-disputed { background: var(--loss); color: var(--loss-text); }
+  .status-icon { font-size: 11px; margin-left: 4px; opacity: 0.8; }
   .scan-btn { font-family: 'DM Sans', sans-serif; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 16px; border-radius: var(--radius); border: 1px solid var(--green-light); background: var(--green-pale); color: var(--green-dark); font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
   .scan-btn:hover { background: var(--green-pale2); border-color: var(--green-dark); }
   .scan-btn:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -632,6 +655,15 @@
       <button class="modal-close" onclick="closeScore()" aria-label="Close score entry dialog">&times;</button>
     </div>
     <div class="score-modal-body">
+      <div id="confirm-banner" class="confirm-banner" style="display:none;">
+        <div class="confirm-banner-title" id="confirm-banner-title"></div>
+        <div class="confirm-banner-values" id="confirm-banner-values"></div>
+        <div class="confirm-banner-actions">
+          <button type="button" class="confirm-banner-btn primary" onclick="confirmMatch()" id="confirm-match-btn">Confirm</button>
+          <button type="button" class="confirm-banner-btn secondary" onclick="editConfirmation()">Disagree / Edit</button>
+        </div>
+      </div>
+      <div id="status-banner" class="status-banner" style="display:none;"></div>
       <div class="scan-section">
         <button type="button" class="scan-btn" onclick="document.getElementById('scan-input').click()" id="scan-btn">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
@@ -1179,12 +1211,24 @@ function canEditMatch(key) {
   if (!userTeamNum) return false;
   const parts = key.split('-');
   const teamNum = parseInt(parts[0]);
-  const dateStr = parts.slice(1).join('-');
-  const sched = TEAM_SCHEDULES[teamNum];
-  const match = sched ? sched.find(m => m.d === dateStr) : null;
-  const oppNum = match ? match.o : null;
-  // Team members can only enter scores from their own team's tab
-  return userTeamNum === teamNum;
+  // Members can only act on matches involving their own team
+  if (userTeamNum !== teamNum) return false;
+  // Locked once confirmed or disputed \u2014 admin only
+  const existing = scores[key];
+  if (existing && (existing.status === 'confirmed' || existing.status === 'disputed')) return false;
+  return true;
+}
+
+// True if the current member should see the "Confirm" prompt
+// (opposing team has submitted but match isn't confirmed yet)
+function isAwaitingMyConfirmation(key) {
+  if (userRole === 'admin') return false;
+  if (!userTeamNum) return false;
+  const existing = scores[key];
+  if (!existing) return false;
+  if (existing.status !== 'awaitingConfirmation') return false;
+  // The match is awaiting confirmation if the OTHER team submitted it
+  return existing.proposedByTeam && existing.proposedByTeam !== userTeamNum;
 }
 
 // ── ADMIN PANEL ──
@@ -1588,22 +1632,46 @@ function renderAllScores() {
     }
     if (score) {
       const isPending = score.result === 'pending';
-      let label = isPending ? 'Pending' : score.result === 'win' ? 'Win' : score.result === 'loss' ? 'Loss' : 'Tie';
-      let cls = isPending ? 'result-pending' : 'result-' + score.result;
+      const status = score.status; // 'awaitingConfirmation' | 'confirmed' | 'disputed' | undefined
+      const awaitsMine = isAwaitingMyConfirmation(key);
+      let label;
+      let cls;
+      if (status === 'disputed') {
+        label = 'Disputed';
+        cls = 'result-disputed';
+      } else if (awaitsMine) {
+        label = 'Confirm';
+        cls = 'result-awaiting';
+      } else if (status === 'awaitingConfirmation' && !isPending) {
+        label = (score.result === 'win' ? 'Win' : score.result === 'loss' ? 'Loss' : 'Tie') + ' (pending)';
+        cls = 'result-awaiting';
+      } else {
+        label = isPending ? 'Pending' : score.result === 'win' ? 'Win' : score.result === 'loss' ? 'Loss' : 'Tie';
+        cls = isPending ? 'result-pending' : 'result-' + score.result;
+      }
       let scoreParts = [];
       if (score.playerScores) {
         score.playerScores.forEach(ps => { if (ps.score) scoreParts.push(ps.score); });
       }
-      let scoreStr = scoreParts.length ? ' \u00b7 ' + scoreParts.join(' / ') : '';
+      let scoreStr = scoreParts.length && status !== 'disputed' && !awaitsMine ? ' \u00b7 ' + scoreParts.join(' / ') : '';
+      const lockIcon = status === 'confirmed' ? ' <span class="status-icon" title="Confirmed \u2014 locked">\u2713</span>' : '';
       const cameraIcon = score.hasImages ? '<span class="has-images-icon" title="Has photos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg></span>' : '';
-      const reschedBtn = editable ? `<button class="resched-btn" onclick="event.stopPropagation();openResched('${key}')" aria-label="Reschedule match" title="Reschedule"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></button>` : '';
-      if (editable) {
-        cell.innerHTML = `<button class="result-badge ${cls}" onclick="openScore('${key}')" aria-label="Edit result: ${label}${scoreStr}">${label}${scoreStr}</button>${cameraIcon}${reschedBtn}`;
+      const reschedBtn = (editable || awaitsMine) ? `<button class="resched-btn" onclick="event.stopPropagation();openResched('${key}')" aria-label="Reschedule match" title="Reschedule"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></button>` : '';
+      // Open the modal if user can edit OR is being asked to confirm
+      const isClickable = editable || awaitsMine || userRole === 'admin';
+      if (isClickable) {
+        cell.innerHTML = `<button class="result-badge ${cls}" onclick="openScore('${key}')" aria-label="${label}${scoreStr}">${label}${scoreStr}${lockIcon}</button>${cameraIcon}${reschedBtn}`;
       } else {
-        cell.innerHTML = `<span class="result-badge ${cls}" style="cursor:default;">${label}${scoreStr}</span>${cameraIcon}`;
+        cell.innerHTML = `<span class="result-badge ${cls}" style="cursor:default;">${label}${scoreStr}${lockIcon}</span>${cameraIcon}`;
       }
-      row.style.background = isPending ? 'rgba(200,215,235,0.3)' : score.result === 'win' ? 'rgba(220,245,228,0.5)' : score.result === 'loss' ? 'rgba(253,232,232,0.5)' : 'rgba(253,246,227,0.35)';
-      row.dataset.scored = isPending ? 'false' : 'true';
+      // Row background tinted by status
+      if (status === 'disputed') row.style.background = 'rgba(253,232,232,0.6)';
+      else if (awaitsMine || status === 'awaitingConfirmation') row.style.background = 'rgba(255,248,214,0.5)';
+      else if (isPending) row.style.background = 'rgba(200,215,235,0.3)';
+      else if (score.result === 'win') row.style.background = 'rgba(220,245,228,0.5)';
+      else if (score.result === 'loss') row.style.background = 'rgba(253,232,232,0.5)';
+      else row.style.background = 'rgba(253,246,227,0.35)';
+      row.dataset.scored = (status === 'confirmed') ? 'true' : 'false';
     } else {
       const reschedBtn = editable ? `<button class="resched-btn" onclick="event.stopPropagation();openResched('${key}')" aria-label="Reschedule match" title="Reschedule"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></button>` : '';
       if (editable) {
@@ -1631,6 +1699,7 @@ function updateStats() {
       sched.forEach(m => {
         const s = scores[t + '-' + m.d];
         if (!s || s.result === 'pending') return;
+        if (s.status && s.status !== 'confirmed') return; // only confirmed matches count
         if (s.result === 'win') w++;
         else if (s.result === 'loss') l++;
         else if (s.result === 'tie') ti++;
@@ -1660,6 +1729,7 @@ function buildStandings() {
       sched.forEach(m => {
         const s = scores[t + '-' + m.d];
         if (!s || s.result === 'pending') return;
+        if (s.status && s.status !== 'confirmed') return; // only confirmed matches count
         if (s.result === 'win') w++;
         else if (s.result === 'loss') l++;
         else if (s.result === 'tie') ti++;
@@ -1724,11 +1794,22 @@ let currentScoreResult = null;
 let previousFocus = null;
 
 function openScore(key) {
-  if (!canEditMatch(key)) { showToast('You can only edit scores for your team'); return; }
+  // Allow opening if user can edit OR is being asked to confirm a match the opponent submitted
+  const editable = canEditMatch(key);
+  const awaitingMine = isAwaitingMyConfirmation(key);
+  // Admins can also view confirmed/disputed matches in read-only-style (admins always editable)
+  if (!editable && !awaitingMine && userRole !== 'admin') {
+    // Read-only view: still allow opening so they can see details, but disable inputs later
+  }
   previousFocus = document.activeElement;
   currentScoreKey = key;
   currentScoreResult = null;
   setScanStatus('', null); // clear any previous scan status
+
+  // Reset banners
+  document.getElementById('confirm-banner').style.display = 'none';
+  document.getElementById('status-banner').style.display = 'none';
+  document.getElementById('status-banner').className = 'status-banner';
 
   const parts = key.split('-');
   const teamNum = parts[0];
@@ -1842,6 +1923,61 @@ function openScore(key) {
       if (imgs && imgs.length) { currentImages = imgs; renderImageSlots(); }
     });
   } else {
+    document.getElementById('btn-delete').style.display = 'none';
+  }
+
+  // ── STATUS BANNERS / READ-ONLY MODE ──
+  const status = existing && existing.status;
+  const isLocked = status === 'confirmed' || status === 'disputed';
+  const showConfirmPrompt = awaitingMine && existing && !isAdminUser;
+
+  if (showConfirmPrompt) {
+    // Show the confirm banner with values from the opposing team
+    const banner = document.getElementById('confirm-banner');
+    banner.style.display = 'block';
+    document.getElementById('confirm-banner-title').textContent =
+      'Team ' + existing.proposedByTeam + ' submitted these values \u2014 confirm if correct.';
+    const teamPtsLabel = 'Team ' + teamNum;
+    const oppPtsLabel = 'Team ' + oppNum;
+    const pts0Display = existing.points?.[0] != null ? existing.points[0] : '\u2014';
+    const pts1Display = existing.points?.[1] != null ? existing.points[1] : '\u2014';
+    const teamScoreDisplay = existing.playerScores?.[0]?.score || '\u2014';
+    const oppScoreDisplay = existing.playerScores?.[1]?.score || '\u2014';
+    document.getElementById('confirm-banner-values').innerHTML =
+      '<strong>' + teamPtsLabel + ':</strong> ' + pts0Display + ' pts / ' + teamScoreDisplay + ' strokes<br>' +
+      '<strong>' + oppPtsLabel + ':</strong> ' + pts1Display + ' pts / ' + oppScoreDisplay + ' strokes';
+  } else if (status === 'awaitingConfirmation' && existing) {
+    const sb = document.getElementById('status-banner');
+    sb.className = 'status-banner awaiting';
+    if (existing.proposedByTeam === userTeamNum) {
+      sb.textContent = 'Submitted \u2014 awaiting Team ' + (oppNum) + ' to confirm. You can still edit until they do.';
+    } else {
+      sb.textContent = 'Awaiting confirmation';
+    }
+    sb.style.display = 'block';
+  } else if (status === 'confirmed' && existing) {
+    const sb = document.getElementById('status-banner');
+    sb.className = 'status-banner confirmed';
+    const who = existing.confirmedBy?.name || 'admin';
+    const teamLabel = existing.confirmedBy?.team === 'admin' ? 'admin' : 'Team ' + existing.confirmedBy?.team;
+    sb.textContent = '\u2713 Confirmed by ' + who + ' (' + teamLabel + ')';
+    sb.style.display = 'block';
+  } else if (status === 'disputed' && existing) {
+    const sb = document.getElementById('status-banner');
+    sb.className = 'status-banner disputed';
+    sb.textContent = 'Disputed \u2014 awaiting admin review';
+    sb.style.display = 'block';
+  }
+
+  // If locked and not admin: disable all inputs and hide save/delete buttons
+  if (isLocked && !isAdminUser) {
+    document.querySelectorAll('#score-overlay input, #score-overlay textarea, #score-overlay .result-opt, #score-overlay .scan-btn').forEach(el => {
+      el.disabled = true;
+      el.style.opacity = '0.6';
+      el.style.cursor = 'not-allowed';
+    });
+    const saveBtn = document.querySelector('#score-overlay .btn-save');
+    if (saveBtn) saveBtn.style.display = 'none';
     document.getElementById('btn-delete').style.display = 'none';
   }
 
@@ -2059,6 +2195,51 @@ function autoSelectResult() {
   else selectResult('tie');
 }
 
+// Confirm the opponent's submitted values without changes (one-click lock)
+async function confirmMatch() {
+  if (!currentScoreKey) return;
+  const existing = scores[currentScoreKey];
+  if (!existing) { showToast('Nothing to confirm yet'); return; }
+  if (!isAwaitingMyConfirmation(currentScoreKey)) { showToast('Not yours to confirm'); return; }
+
+  const parts = currentScoreKey.split('-');
+  const teamNum = parseInt(parts[0]);
+  const dateStr = parts.slice(1).join('-');
+  const sched = TEAM_SCHEDULES[teamNum];
+  const match = sched ? sched.find(m => m.d === dateStr) : null;
+  const mirrorKey = match ? match.o + '-' + dateStr : null;
+  const existingMirror = mirrorKey ? scores[mirrorKey] : null;
+
+  const confirmedBy = { uid: currentUser?.uid || null, name: userName || currentUser?.email || ('Team ' + userTeamNum), team: userTeamNum, at: new Date().toISOString() };
+  const history = (existing.history || []).concat([{ at: confirmedBy.at, by: confirmedBy.name, byTeam: userTeamNum, action: 'confirmed' }]);
+
+  const updatedPrimary = Object.assign({}, existing, { status: 'confirmed', confirmedBy, history, savedAt: new Date().toISOString() });
+  scores[currentScoreKey] = updatedPrimary;
+  if (mirrorKey && existingMirror) {
+    scores[mirrorKey] = Object.assign({}, existingMirror, { status: 'confirmed', confirmedBy, history, savedAt: new Date().toISOString() });
+  }
+
+  try {
+    const batch = db.batch();
+    batch.set(db.collection('scores').doc(currentScoreKey), scores[currentScoreKey]);
+    if (mirrorKey) batch.set(db.collection('scores').doc(mirrorKey), scores[mirrorKey]);
+    await batch.commit();
+  } catch(e) {
+    console.error('Confirm save failed', e);
+    showToast('Failed to confirm \u2014 try again');
+    return;
+  }
+  closeScore();
+  showToast('Match confirmed \u2713');
+}
+
+// Hide the confirm banner so the user can edit values themselves (path -> dispute or match)
+function editConfirmation() {
+  document.getElementById('confirm-banner').style.display = 'none';
+  // Bring focus to the first editable points input
+  setTimeout(() => { const inp = document.getElementById('pts-1'); if (inp && !inp.disabled) inp.focus(); }, 50);
+}
+
 async function saveScore() {
   const isAdmin = userRole === 'admin';
   // Admins must pick a result; non-admins don't need to (auto-calculated)
@@ -2144,13 +2325,76 @@ async function saveScore() {
     }
   }
 
+  // ── DETERMINE STATUS / CONFIRMATION FLOW ──
+  // Status transitions:
+  //   no entry         -> 'awaitingConfirmation' (first team submitted)
+  //   awaiting (same team) -> stays 'awaitingConfirmation' (correcting own entry)
+  //   awaiting (other team), values match -> 'confirmed'
+  //   awaiting (other team), values differ -> 'disputed'
+  //   admin save -> 'confirmed' (admin override is final)
+  let status = 'awaitingConfirmation';
+  let proposedByTeam = teamNum;
+  let proposedByUid = currentUser ? currentUser.uid : null;
+  let proposedByName = userName || (currentUser ? currentUser.email : 'Unknown');
+  let proposedAt = new Date().toISOString();
+  let confirmedBy = null;
+  let history = (existingPrimary && Array.isArray(existingPrimary.history)) ? existingPrimary.history.slice() : [];
+
+  if (existingPrimary) {
+    // Preserve original proposer info
+    proposedByTeam = existingPrimary.proposedByTeam || proposedByTeam;
+    proposedByUid = existingPrimary.proposedByUid || proposedByUid;
+    proposedByName = existingPrimary.proposedByName || proposedByName;
+    proposedAt = existingPrimary.proposedAt || proposedAt;
+  }
+
+  if (isAdmin) {
+    status = 'confirmed';
+    confirmedBy = { uid: currentUser?.uid || null, name: userName || currentUser?.email || 'Admin', team: 'admin', at: new Date().toISOString() };
+    history.push({ at: new Date().toISOString(), by: userName || 'Admin', byTeam: 'admin', action: existingPrimary ? 'admin_edit' : 'admin_entered' });
+  } else if (!existingPrimary) {
+    // First entry by a team member
+    status = 'awaitingConfirmation';
+    proposedByTeam = userTeamNum;
+    proposedByUid = currentUser?.uid || null;
+    proposedByName = userName || currentUser?.email || ('Team ' + userTeamNum);
+    proposedAt = new Date().toISOString();
+    history.push({ at: proposedAt, by: proposedByName, byTeam: userTeamNum, action: 'entered' });
+  } else if (existingPrimary.proposedByTeam === userTeamNum) {
+    // Same team correcting their own entry before opponent confirms
+    status = existingPrimary.status === 'confirmed' ? 'confirmed' : 'awaitingConfirmation';
+    history.push({ at: new Date().toISOString(), by: userName || ('Team ' + userTeamNum), byTeam: userTeamNum, action: 'edited_own' });
+  } else {
+    // Opposing team submitting -> compare to existing values
+    const samePts0 = (existingPrimary.points?.[0] ?? null) === pts0;
+    const samePts1 = (existingPrimary.points?.[1] ?? null) === pts1;
+    const sameTeamScore = (existingPrimary.playerScores?.[0]?.score ?? null) === teamScore;
+    const sameOppScore = (existingPrimary.playerScores?.[1]?.score ?? null) === oppScore;
+    const valuesMatch = samePts0 && samePts1 && sameTeamScore && sameOppScore;
+    if (valuesMatch) {
+      status = 'confirmed';
+      confirmedBy = { uid: currentUser?.uid || null, name: userName || currentUser?.email || ('Team ' + userTeamNum), team: userTeamNum, at: new Date().toISOString() };
+      history.push({ at: confirmedBy.at, by: confirmedBy.name, byTeam: userTeamNum, action: 'confirmed' });
+    } else {
+      status = 'disputed';
+      history.push({ at: new Date().toISOString(), by: userName || ('Team ' + userTeamNum), byTeam: userTeamNum, action: 'disputed' });
+    }
+  }
+
   scores[currentScoreKey] = {
     result: result,
     playerScores,
     points: [pts0, pts1],
     notes: document.getElementById('score-notes').value.trim(),
     hasImages: currentImages.length > 0,
-    savedAt: new Date().toISOString()
+    savedAt: new Date().toISOString(),
+    status,
+    proposedByTeam,
+    proposedByUid,
+    proposedByName,
+    proposedAt,
+    confirmedBy,
+    history
   };
 
   // Mirror to opponent
@@ -2171,7 +2415,14 @@ async function saveScore() {
       points: [pts1, pts0],
       notes: scores[currentScoreKey].notes,
       hasImages: scores[currentScoreKey].hasImages,
-      savedAt: new Date().toISOString()
+      savedAt: new Date().toISOString(),
+      status,
+      proposedByTeam,
+      proposedByUid,
+      proposedByName,
+      proposedAt,
+      confirmedBy,
+      history
     };
   }
 
