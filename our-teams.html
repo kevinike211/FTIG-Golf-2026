@@ -1935,16 +1935,15 @@ async function scanScorecard(event) {
     const teamAPlayers = TEAMS[teamNum] ? TEAMS[teamNum].players.map(p => p.name).join(' / ') : '';
     const teamBPlayers = TEAMS[oppNum] ? TEAMS[oppNum].players.map(p => p.name).join(' / ') : '';
 
-    const prompt = 'This is a 9-hole golf scorecard for a match. ' +
+    const prompt = 'This is a handwritten 9-hole golf scorecard for a match-play league. ' +
       'Team A is "Team ' + teamNum + '" with players: ' + teamAPlayers + '. ' +
       'Team B is "Team ' + oppNum + '" with players: ' + teamBPlayers + '. ' +
-      'On the card, the players above will likely be identified by their LAST NAME (e.g., "' + (TEAMS[teamNum]?.players[0]?.name.split(',')[0] || '') + '"). ' +
-      'Match each row of the scorecard to the correct team using these names. ' +
-      'For each team, return: ' +
-      '  (1) teamAScore / teamBScore: the TOTAL strokes for that team across all 9 holes (sum of the row, often shown in a "Total" or "T" column). ' +
-      '  (2) teamAPoints / teamBPoints: the MATCH POINTS earned (a number from 0 to 9 with optional 0.5 halves). The two teams\' points must total exactly 9. Points may be written separately at the bottom or right side of the card. ' +
-      'If a value is genuinely unreadable or missing, return null for that field. Do not invent values. ' +
-      'Set confidence based on how clearly you can read the scorecard.';
+      'On the card, players are usually identified by LAST NAME only (e.g., "' + (TEAMS[teamNum]?.players[0]?.name.split(',')[0] || '') + '"). Use these names to determine which row belongs to which team. ' +
+      'IGNORE any unrelated handwritten notes, phone numbers, addresses, or messages scrawled across the card \u2014 they are not part of the scorecard data. ' +
+      '\n\nFor each team, extract:\n' +
+      '  - **MATCH POINTS** (most important): each team earns 0\u20139 points per 9-hole match, often shown as halves (\u00bd). Look for a "Points" row near each team\'s name. The point total for each team is usually written at the rightmost column of that row, and the two teams\' totals MUST sum to exactly 9 (e.g., 5\u00bd vs 3\u00bd). Convert fractions like "5\u00bd", "5 1/2", "5/2" to decimal 5.5.\n' +
+      '  - **TOTAL STROKES** (optional): the team\'s total strokes for the 9 holes, ONLY if a clean team total is written. If only individual player strokes are visible (no team total), return null \u2014 do NOT sum them yourself.\n' +
+      '\nIf a value is unclear or missing, return null. Do not guess. Set confidence to "low" if writing is messy or partly obscured.';
 
     const schema = {
       type: 'object',
