@@ -57,7 +57,7 @@
     --radius: 10px; --radius-lg: 16px;
     --win: #dcf5e4; --win-text: #1a6b36;
     --loss: #fde8e8; --loss-text: #a32d2d;
-    --tie: #fdf6e3; --tie-text: #7a5a00;
+    --tie: #e6edf5; --tie-text: #3b4f6b;
   }
   body { font-family: 'DM Sans', system-ui, sans-serif; background: var(--bg); color: var(--text-primary); min-height: 100vh; line-height: 1.6; }
 
@@ -110,7 +110,7 @@
   .stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255,255,255,0.45); margin-top: 2px; }
   .stat-card.win .stat-num { color: #9fecb8; }
   .stat-card.loss .stat-num { color: #f9a8a8; }
-  .stat-card.tie .stat-num { color: var(--gold-light); }
+  .stat-card.tie .stat-num { color: #b3c5e0; }
 
   /* ── MAIN ── */
   .main { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
@@ -318,7 +318,7 @@
   .result-opt:focus-visible { outline: 2px solid var(--green-light); outline-offset: 2px; }
   .selected-win { background: var(--win); color: var(--win-text); border-color: #7ecb94; }
   .selected-loss { background: var(--loss); color: var(--loss-text); border-color: #f0a0a0; }
-  .selected-tie { background: var(--tie); color: var(--tie-text); border-color: #d4c080; }
+  .selected-tie { background: var(--tie); color: var(--tie-text); border-color: #8aa4c4; }
   .score-players-grid { display: flex; gap: 16px; flex-wrap: wrap; }
   .score-player-block { flex: 1; min-width: 120px; }
   .score-player-name { font-size: 13px; font-weight: 500; margin-bottom: 4px; }
@@ -1698,6 +1698,7 @@ function buildTeamPanel(teamNum) {
     <div class="legend-item"><div class="legend-dot" style="background:var(--green-light);" aria-hidden="true"></div> Upcoming</div>
     <div class="legend-item"><div class="legend-dot" style="background:#7ecb94;" aria-hidden="true"></div> Win recorded</div>
     <div class="legend-item"><div class="legend-dot" style="background:#f0a0a0;" aria-hidden="true"></div> Loss recorded</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#8aa4c4;" aria-hidden="true"></div> Tie recorded</div>
   </div>`;
 
   // Filter bar
@@ -1882,7 +1883,7 @@ function renderAllScores() {
       else if (isPending) row.style.background = 'rgba(200,215,235,0.3)';
       else if (score.result === 'win') row.style.background = 'rgba(220,245,228,0.5)';
       else if (score.result === 'loss') row.style.background = 'rgba(253,232,232,0.5)';
-      else row.style.background = 'rgba(253,246,227,0.35)';
+      else row.style.background = 'rgba(230,237,245,0.5)'; // tie tint (slate blue)
       row.dataset.scored = (status === 'confirmed') ? 'true' : 'false';
     } else {
       const reschedBtn = editable ? `<button class="resched-btn" onclick="event.stopPropagation();openResched('${key}')" aria-label="Reschedule match" title="Reschedule"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></button>` : '';
