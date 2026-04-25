@@ -439,6 +439,9 @@
     .date-col { width: 1%; white-space: nowrap; padding: 8px 6px !important; }
     .course-cell { width: 1%; padding: 8px 4px !important; white-space: nowrap; }
     .course-cell .course-badge { font-size: 9px; padding: 2px 6px; }
+    /* Shorten "Blue Mtn." -> "Bl Mtn." on phone screens */
+    .course-cell .badge-blue { font-size: 0; }
+    .course-cell .badge-blue::before { content: "Bl Mtn."; font-size: 9px; }
 
     /* Hide the # column on mobile (the team number is shown in the stack instead) */
     .schedule-table .opp-num-cell { display: none; }
