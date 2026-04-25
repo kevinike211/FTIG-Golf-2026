@@ -2158,13 +2158,13 @@ async function scanScorecard(event) {
     const pts0 = document.getElementById('pts-0');
     const pts1 = document.getElementById('pts-1');
 
-    // Scores (only admins can edit their own team score, members can edit opponent score)
-    if (parsed.teamAScore != null && pi0 && !pi0.disabled) { pi0.value = parsed.teamAScore; filled.push('Team ' + teamNum + ' score'); }
-    if (parsed.teamBScore != null && pi1 && !pi1.disabled) { pi1.value = parsed.teamBScore; filled.push('Team ' + oppNum + ' score'); }
-
-    // Points
-    if (parsed.teamAPoints != null && pts0 && !pts0.disabled) { pts0.value = parsed.teamAPoints; filled.push('Team ' + teamNum + ' pts'); }
-    if (parsed.teamBPoints != null && pts1 && !pts1.disabled) { pts1.value = parsed.teamBPoints; filled.push('Team ' + oppNum + ' pts'); }
+    // Fill in BOTH teams' values regardless of which inputs are disabled.
+    // The scan is reading directly from the physical card, so it isn't self-reporting.
+    // The both-teams-confirm flow ensures the opposing team still has to agree.
+    if (parsed.teamAScore != null && pi0) { pi0.value = parsed.teamAScore; filled.push('Team ' + teamNum + ' score'); }
+    if (parsed.teamBScore != null && pi1) { pi1.value = parsed.teamBScore; filled.push('Team ' + oppNum + ' score'); }
+    if (parsed.teamAPoints != null && pts0) { pts0.value = parsed.teamAPoints; filled.push('Team ' + teamNum + ' pts'); }
+    if (parsed.teamBPoints != null && pts1) { pts1.value = parsed.teamBPoints; filled.push('Team ' + oppNum + ' pts'); }
 
     validatePoints();
     autoSelectResult();
