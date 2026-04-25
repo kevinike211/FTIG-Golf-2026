@@ -502,6 +502,60 @@
   .admin-mini-btn:hover { background: var(--green-pale); border-color: var(--green-light); color: var(--green-dark); }
   .admin-save-btn { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; padding: 6px 18px; border-radius: 999px; border: none; background: var(--green-dark); color: white; cursor: pointer; margin-left: auto; }
   .admin-save-btn:hover { background: var(--green-mid); }
+
+  /* ── ADMIN DASHBOARD: TABS ── */
+  .admin-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 1rem; flex-wrap: wrap; }
+  .admin-tab { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; padding: 8px 16px; border: none; background: transparent; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px; }
+  .admin-tab:hover { color: var(--green-dark); }
+  .admin-tab.active { color: var(--green-dark); border-bottom-color: var(--green-dark); }
+  .admin-tab-count { font-size: 11px; background: var(--green-pale); color: var(--green-dark); padding: 1px 8px; border-radius: 999px; font-weight: 600; }
+
+  /* ── ADMIN STATS ── */
+  .admin-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 1rem; }
+  .admin-stat { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; text-align: center; }
+  .admin-stat-num { font-family: 'Playfair Display', Georgia, serif; font-size: 22px; font-weight: 700; color: var(--text-primary); line-height: 1; }
+  .admin-stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-top: 4px; }
+
+  /* ── ADMIN TOOLBAR / SEARCH ── */
+  .admin-toolbar { margin-bottom: 8px; }
+  .admin-search { font-family: 'DM Sans', sans-serif; width: 100%; padding: 9px 14px; border: 1px solid var(--border-dark); border-radius: var(--radius); font-size: 14px; }
+  .admin-search:focus { border-color: var(--green-light); outline: none; box-shadow: 0 0 0 3px rgba(74,140,92,0.12); }
+  .admin-filters { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+  .admin-filter { font-family: 'DM Sans', sans-serif; font-size: 12px; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--border-dark); background: white; color: var(--text-secondary); cursor: pointer; transition: all 0.15s; }
+  .admin-filter:hover { background: var(--green-pale); border-color: var(--green-light); color: var(--green-dark); }
+  .admin-filter.active { background: var(--green-dark); color: white; border-color: var(--green-dark); }
+
+  /* ── ADMIN USER CARDS ── */
+  .admin-user-card { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 8px; background: white; }
+  .admin-user-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--green-pale); color: var(--green-dark); font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .admin-user-main { flex: 1; min-width: 0; }
+  .admin-user-main .admin-user-name { font-weight: 500; font-size: 14px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .admin-user-main .admin-user-email { font-size: 12px; color: var(--text-muted); margin-top: 2px; word-break: break-all; }
+  .admin-you-tag { font-size: 10px; background: var(--gold-pale); color: var(--tie-text); padding: 2px 8px; border-radius: 999px; font-weight: 500; }
+  .admin-remove-btn { width: 28px; height: 28px; padding: 0; font-size: 16px; line-height: 1; color: #a32d2d; border-color: #f0a0a0; }
+  .admin-remove-btn:hover { background: #fde8e8; color: #a32d2d; }
+  .admin-empty-state { text-align: center; padding: 2rem; color: var(--text-muted); font-size: 13px; }
+
+  /* ── ADMIN TEAMS TAB ── */
+  .admin-team-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
+  .admin-team-card { border: 1px solid var(--border); border-radius: var(--radius); padding: 10px; background: white; }
+  .admin-team-card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  .admin-team-card-num { font-family: 'Playfair Display', Georgia, serif; font-size: 20px; font-weight: 700; color: var(--green-dark); width: 32px; flex-shrink: 0; }
+  .admin-team-card-roster { font-size: 12px; color: var(--text-secondary); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .admin-team-count { font-size: 11px; background: var(--green-pale); color: var(--green-dark); padding: 2px 8px; border-radius: 999px; font-weight: 600; }
+  .admin-team-empty { font-size: 11px; color: var(--text-muted); font-style: italic; }
+  .admin-team-card-members { display: flex; flex-direction: column; gap: 6px; }
+  .admin-team-member { display: flex; align-items: center; gap: 8px; padding: 6px; border-radius: var(--radius); background: var(--bg); }
+  .admin-mini-avatar { width: 28px; height: 28px; border-radius: 50%; background: white; border: 1px solid var(--border); color: var(--green-dark); font-weight: 700; font-size: 11px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .admin-mini-name { font-size: 13px; font-weight: 500; }
+  .admin-mini-email { font-size: 11px; color: var(--text-muted); word-break: break-all; }
+  .admin-team-member > div { flex: 1; min-width: 0; }
+  .admin-team-member .admin-mini-btn { width: 24px; height: 24px; padding: 0; font-size: 14px; flex-shrink: 0; }
+
+  @media (max-width: 480px) {
+    .admin-stats { grid-template-columns: repeat(2, 1fr); }
+    .admin-team-grid { grid-template-columns: 1fr; }
+  }
   .admin-user-name { font-weight: 500; font-size: 14px; flex: 1; min-width: 120px; }
   .admin-user-email { font-size: 12px; color: var(--text-muted); flex: 1; min-width: 150px; }
   .admin-user-role { font-size: 12px; }
@@ -1232,59 +1286,180 @@ function isAwaitingMyConfirmation(key) {
 }
 
 // ── ADMIN PANEL ──
+// ── ADMIN DASHBOARD ──
+let adminUsersCache = [];          // [{uid, ...userData}] cached for quick re-render
+let adminCurrentTab = 'users';     // 'users' | 'teams' | 'settings'
+let adminUserSearch = '';          // search query
+let adminUserFilter = 'all';       // 'all' | 'admin' | 'assigned' | 'unassigned'
+
 async function openAdminPanel() {
   if (userRole !== 'admin') { showToast('Admin access required'); return; }
+  // Reset state on each open
+  adminCurrentTab = 'users';
+  adminUserSearch = '';
+  adminUserFilter = 'all';
+  pendingVisibleTeams = null;
+  await refreshAdminUsers();
+  document.getElementById('admin-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+async function refreshAdminUsers() {
   const snapshot = await db.collection('users').get();
-
-  // Visible Teams section
-  let html = '<div class="admin-section"><h3 class="admin-section-title">Visible Teams</h3>';
-  html += '<p class="admin-section-hint">Toggle which teams appear in tabs and standings for all users.</p>';
-  html += '<div class="admin-visible-grid">';
-  ALL_TEAM_NUMS.forEach(n => {
-    const team = TEAMS[n];
-    const names = team ? team.players.map(p => p.name.split(',')[0]).join(' / ') : '';
-    const checked = visibleTeams.includes(n) ? 'checked' : '';
-    html += '<label class="admin-visible-item">' +
-      '<input type="checkbox" value="' + n + '" ' + checked + ' onchange="onToggleVisible(this)">' +
-      '<span class="admin-visible-num">' + n + '</span>' +
-      '<span class="admin-visible-names">' + names + '</span>' +
-      '</label>';
+  adminUsersCache = [];
+  snapshot.forEach(doc => adminUsersCache.push(Object.assign({ uid: doc.id }, doc.data())));
+  // Sort: admins first, then by team number, then by name
+  adminUsersCache.sort((a, b) => {
+    const aRank = a.role === 'admin' ? -1 : (a.teamNum || 999);
+    const bRank = b.role === 'admin' ? -1 : (b.teamNum || 999);
+    if (aRank !== bRank) return aRank - bRank;
+    return (a.name || a.email || '').localeCompare(b.name || b.email || '');
   });
-  html += '</div>';
-  html += '<div class="admin-visible-actions">' +
-    '<button class="admin-mini-btn" onclick="selectAllVisible(true)">Select all</button>' +
-    '<button class="admin-mini-btn" onclick="selectAllVisible(false)">Clear all</button>' +
-    '<button class="admin-save-btn" onclick="applyVisibleTeams()">Apply</button>' +
+  renderAdminPanel();
+}
+
+function setAdminTab(tab) { adminCurrentTab = tab; renderAdminPanel(); }
+function setAdminFilter(f) { adminUserFilter = f; renderAdminPanel(); }
+function onAdminSearchInput(val) {
+  adminUserSearch = (val || '').toLowerCase();
+  // Re-render only the user list, preserving the search input focus
+  const list = document.getElementById('admin-user-list-container');
+  if (list) list.innerHTML = renderAdminUsersListHTML();
+}
+
+function renderAdminPanel() {
+  const total = adminUsersCache.length;
+  const adminCount = adminUsersCache.filter(u => u.role === 'admin').length;
+  const assigned = adminUsersCache.filter(u => u.role !== 'admin' && u.teamNum).length;
+  const unassigned = adminUsersCache.filter(u => u.role !== 'admin' && !u.teamNum).length;
+
+  let html = '';
+
+  // Tab nav
+  html += '<div class="admin-tabs" role="tablist">' +
+    `<button class="admin-tab${adminCurrentTab==='users'?' active':''}" role="tab" onclick="setAdminTab('users')">Users <span class="admin-tab-count">${total}</span></button>` +
+    `<button class="admin-tab${adminCurrentTab==='teams'?' active':''}" role="tab" onclick="setAdminTab('teams')">Teams</button>` +
+    `<button class="admin-tab${adminCurrentTab==='settings'?' active':''}" role="tab" onclick="setAdminTab('settings')">Settings</button>` +
     '</div>';
-  html += '</div>';
 
-  // Users section
-  html += '<div class="admin-section"><h3 class="admin-section-title">Users</h3>';
-  html += '<div class="admin-user-list">';
-  snapshot.forEach(doc => {
-    const u = doc.data();
-    const uid = doc.id;
-    const roleBadge = u.role === 'admin' ? '<span class="admin-badge admin-badge-admin">Admin</span>' :
-                      u.teamNum ? '<span class="admin-badge admin-badge-member">Team ' + u.teamNum + '</span>' :
-                      '<span class="admin-badge admin-badge-unassigned">Unassigned</span>';
+  if (adminCurrentTab === 'users') {
+    // Stats
+    html += '<div class="admin-stats">' +
+      `<div class="admin-stat"><div class="admin-stat-num">${total}</div><div class="admin-stat-label">Total</div></div>` +
+      `<div class="admin-stat"><div class="admin-stat-num" style="color:var(--gold);">${adminCount}</div><div class="admin-stat-label">Admins</div></div>` +
+      `<div class="admin-stat"><div class="admin-stat-num" style="color:var(--green-dark);">${assigned}</div><div class="admin-stat-label">Assigned</div></div>` +
+      `<div class="admin-stat"><div class="admin-stat-num" style="color:#a32d2d;">${unassigned}</div><div class="admin-stat-label">Unassigned</div></div>` +
+      '</div>';
+    // Search + filters
+    html += '<div class="admin-toolbar">' +
+      `<input class="admin-search" type="search" placeholder="Search name or email..." value="${adminUserSearch}" oninput="onAdminSearchInput(this.value)">` +
+      '</div>';
+    html += '<div class="admin-filters">' +
+      `<button class="admin-filter${adminUserFilter==='all'?' active':''}" onclick="setAdminFilter('all')">All</button>` +
+      `<button class="admin-filter${adminUserFilter==='admin'?' active':''}" onclick="setAdminFilter('admin')">Admins</button>` +
+      `<button class="admin-filter${adminUserFilter==='assigned'?' active':''}" onclick="setAdminFilter('assigned')">Assigned</button>` +
+      `<button class="admin-filter${adminUserFilter==='unassigned'?' active':''}" onclick="setAdminFilter('unassigned')">Unassigned</button>` +
+      '</div>';
+    // User list
+    html += `<div class="admin-user-list" id="admin-user-list-container">${renderAdminUsersListHTML()}</div>`;
+  } else if (adminCurrentTab === 'teams') {
+    html += '<p class="admin-section-hint">League members assigned to each team.</p>';
+    html += '<div class="admin-team-grid">';
+    ALL_TEAM_NUMS.forEach(num => {
+      const team = TEAMS[num];
+      const rosterNames = team ? team.players.map(p => p.name.split(',')[0]).join(' / ') : '';
+      const members = adminUsersCache.filter(u => u.role !== 'admin' && u.teamNum === num);
+      html += '<div class="admin-team-card">' +
+        '<div class="admin-team-card-head">' +
+          `<div class="admin-team-card-num">${num}</div>` +
+          `<div class="admin-team-card-roster">${rosterNames}</div>` +
+          (members.length === 0 ? '<span class="admin-team-empty">no users</span>' : `<span class="admin-team-count">${members.length}</span>`) +
+        '</div>';
+      if (members.length) {
+        html += '<div class="admin-team-card-members">';
+        members.forEach(u => {
+          html += '<div class="admin-team-member">' +
+            `<span class="admin-mini-avatar">${initials(u.name || u.email || '?')}</span>` +
+            `<div><div class="admin-mini-name">${u.name || 'No name'}</div><div class="admin-mini-email">${u.email || ''}</div></div>` +
+            `<button class="admin-mini-btn" onclick="updateUserRole('${u.uid}', '')" title="Unassign">\u00d7</button>` +
+            '</div>';
+        });
+        html += '</div>';
+      }
+      html += '</div>';
+    });
+    html += '</div>';
+  } else if (adminCurrentTab === 'settings') {
+    html += '<h3 class="admin-section-title">Visible Teams</h3>';
+    html += '<p class="admin-section-hint">Toggle which teams appear in tabs and standings for all users.</p>';
+    html += '<div class="admin-visible-grid">';
+    ALL_TEAM_NUMS.forEach(n => {
+      const team = TEAMS[n];
+      const names = team ? team.players.map(p => p.name.split(',')[0]).join(' / ') : '';
+      const checked = visibleTeams.includes(n) ? 'checked' : '';
+      html += '<label class="admin-visible-item">' +
+        '<input type="checkbox" value="' + n + '" ' + checked + ' onchange="onToggleVisible(this)">' +
+        '<span class="admin-visible-num">' + n + '</span>' +
+        '<span class="admin-visible-names">' + names + '</span>' +
+        '</label>';
+    });
+    html += '</div>';
+    html += '<div class="admin-visible-actions">' +
+      '<button class="admin-mini-btn" onclick="selectAllVisible(true)">Select all</button>' +
+      '<button class="admin-mini-btn" onclick="selectAllVisible(false)">Clear all</button>' +
+      '<button class="admin-save-btn" onclick="applyVisibleTeams()">Apply</button>' +
+      '</div>';
+  }
 
-    // Build team dropdown options
+  document.getElementById('admin-body').innerHTML = html;
+}
+
+function renderAdminUsersListHTML() {
+  const q = adminUserSearch;
+  const filtered = adminUsersCache.filter(u => {
+    if (adminUserFilter === 'admin' && u.role !== 'admin') return false;
+    if (adminUserFilter === 'assigned' && (u.role === 'admin' || !u.teamNum)) return false;
+    if (adminUserFilter === 'unassigned' && (u.role === 'admin' || u.teamNum)) return false;
+    if (q) {
+      const hay = ((u.name || '') + ' ' + (u.email || '')).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+  if (!filtered.length) return '<div class="admin-empty-state">No users match your search.</div>';
+  return filtered.map(u => {
+    const roleBadge = u.role === 'admin'
+      ? '<span class="admin-badge admin-badge-admin">Admin</span>'
+      : (u.teamNum ? `<span class="admin-badge admin-badge-member">Team ${u.teamNum}</span>` : '<span class="admin-badge admin-badge-unassigned">Unassigned</span>');
     let teamOptions = '<option value="">Unassigned</option><option value="admin"' + (u.role === 'admin' ? ' selected' : '') + '>Admin</option>';
     ALL_TEAM_NUMS.forEach(n => {
       const selected = (u.role !== 'admin' && u.teamNum === n) ? ' selected' : '';
-      teamOptions += '<option value="' + n + '"' + selected + '>Team ' + n + '</option>';
+      teamOptions += `<option value="${n}"${selected}>Team ${n}</option>`;
     });
-
-    html += '<div class="admin-user-row">' +
-      '<div class="admin-user-name">' + (u.name || 'No name') + ' ' + roleBadge + '</div>' +
-      '<div class="admin-user-email">' + (u.email || '') + '</div>' +
-      '<select class="admin-select" onchange="updateUserRole(\'' + uid + '\', this.value)">' + teamOptions + '</select>' +
+    const isMe = currentUser && currentUser.uid === u.uid;
+    const removeBtn = isMe ? '' : `<button class="admin-mini-btn admin-remove-btn" onclick="removeUserConfirm('${u.uid}', '${(u.name || u.email || '').replace(/'/g,"\\'")}')" title="Remove user">\u00d7</button>`;
+    return '<div class="admin-user-card">' +
+      `<div class="admin-user-avatar">${initials(u.name || u.email || '?')}</div>` +
+      '<div class="admin-user-main">' +
+        `<div class="admin-user-name">${u.name || 'No name'} ${roleBadge}${isMe ? ' <span class="admin-you-tag">you</span>' : ''}</div>` +
+        `<div class="admin-user-email">${u.email || ''}</div>` +
+      '</div>' +
+      `<select class="admin-select" onchange="updateUserRole('${u.uid}', this.value)">${teamOptions}</select>` +
+      removeBtn +
       '</div>';
-  });
-  html += '</div></div>'; // close admin-user-list and admin-section
-  document.getElementById('admin-body').innerHTML = html;
-  document.getElementById('admin-overlay').classList.add('open');
-  document.body.style.overflow = 'hidden';
+  }).join('');
+}
+
+async function removeUserConfirm(uid, name) {
+  if (!confirm('Remove ' + (name || 'this user') + '? They\u2019ll lose access until they\u2019re re-added by an admin.')) return;
+  try {
+    await db.collection('users').doc(uid).delete();
+    showToast('User removed');
+    await refreshAdminUsers();
+  } catch(e) {
+    console.error('Failed to remove user', e);
+    showToast('Failed to remove');
+  }
 }
 
 // Admin visible-teams helpers
@@ -1325,7 +1500,7 @@ async function updateUserRole(uid, value) {
     await db.collection('users').doc(uid).update({ role: 'member', teamNum: null });
   }
   showToast('User updated');
-  openAdminPanel();
+  await refreshAdminUsers();
 }
 
 // Temporary image array for the currently open score modal
