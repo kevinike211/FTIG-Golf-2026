@@ -178,6 +178,10 @@
   .opp-num-cell { width: 36px; color: var(--text-muted); font-size: 13px; text-align: center; }
   /* Inline team number shown only on mobile (the # column is hidden there) */
   .opp-num-inline { display: none; color: var(--text-muted); font-weight: 500; margin-right: 2px; }
+  /* Stacked opponent layout: #N on top, each name on its own row */
+  .opp-num-stack { display: none; }
+  .opp-name-line { display: inline; }
+  .opp-name-line + .opp-name-line::before { content: ' / '; color: var(--text-muted); }
   .score-cell { width: 130px; }
 
   .course-badge { display: inline-block; font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
@@ -436,14 +440,19 @@
     .course-cell { width: 1%; padding: 8px 4px !important; white-space: nowrap; }
     .course-cell .course-badge { font-size: 9px; padding: 2px 6px; }
 
-    /* Hide the # column on mobile, show the team number inline with the opponent name instead */
+    /* Hide the # column on mobile (the team number is shown in the stack instead) */
     .schedule-table .opp-num-cell { display: none; }
     .schedule-table thead th.opp-num-cell { display: none; }
-    .opp-num-inline { display: inline; }
 
-    /* Opponent column takes all remaining width */
+    /* Opponent column takes all remaining width with a stacked layout:
+       Row 1: #N
+       Row 2: first player
+       Row 3: second player (etc.) */
     .schedule-table td:nth-child(3) { width: auto; }
-    .opp-link { font-size: 13px; line-height: 1.3; word-break: break-word; white-space: normal; text-align: left; }
+    .opp-link { font-size: 13px; line-height: 1.25; text-align: left; padding: 0; }
+    .opp-num-stack { display: block; color: var(--text-muted); font-weight: 500; font-size: 11px; }
+    .opp-name-line { display: block; }
+    .opp-name-line + .opp-name-line::before { content: none; }
 
     /* Score column shrinks to fit the badge */
     .score-cell { width: 1%; padding: 8px 4px !important; text-align: right; white-space: nowrap; }
@@ -1610,6 +1619,13 @@ function getOppNames(teamNum) {
   return team.players.map(p => p.name.split(',')[0]).join(' / ');
 }
 
+// Stacked version: returns each last name in its own line span (used in schedule rows)
+function getOppNamesStacked(teamNum) {
+  const team = TEAMS[teamNum];
+  if (!team) return '';
+  return team.players.map(p => `<span class="opp-name-line">${p.name.split(',')[0]}</span>`).join('');
+}
+
 // ── HELPER: course display label ──
 function courseLabel(c) {
   return c === 'manada' ? 'Manada' : 'Blue Mtn.';
@@ -1649,7 +1665,7 @@ function buildScheduleRows(teamNum) {
     rows += `<tr data-course="${m.c}" data-date="${m.d}" data-key="${key}" data-team="${teamNum}">` +
       `<td class="date-col">${dateFmt}</td>` +
       `<td class="course-cell"><span class="course-badge ${courseClass}">${courseTxt}</span></td>` +
-      `<td><button class="opp-link" onclick="openContact(${m.o},'${dateFmt} @ ${courseTxt}')" aria-label="View contact info for Team ${m.o} ${oppNames}"><span class="opp-num-inline">#${m.o}</span> ${oppNames}</button></td>` +
+      `<td><button class="opp-link" onclick="openContact(${m.o},'${dateFmt} @ ${courseTxt}')" aria-label="View contact info for Team ${m.o} ${oppNames}"><span class="opp-num-stack">#${m.o}</span>${getOppNamesStacked(m.o)}</button></td>` +
       `<td class="opp-num-cell">${m.o}</td>` +
       `<td class="score-cell" id="sc-${key}"></td>` +
       `</tr>`;
