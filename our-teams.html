@@ -1834,13 +1834,8 @@ function renderAllScores() {
       const lockIcon = status === 'confirmed' ? ' <span class="status-icon" title="Confirmed \u2014 locked">\u2713</span>' : '';
       const cameraIcon = score.hasImages ? '<span class="has-images-icon" title="Has photos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg></span>' : '';
       const reschedBtn = (editable || awaitsMine) ? `<button class="resched-btn" onclick="event.stopPropagation();openResched('${key}')" aria-label="Reschedule match" title="Reschedule"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></button>` : '';
-      // Open the modal if user can edit OR is being asked to confirm
-      const isClickable = editable || awaitsMine || userRole === 'admin';
-      if (isClickable) {
-        cell.innerHTML = `<button class="result-badge ${cls}" onclick="openScore('${key}')" aria-label="${label}${scoreStr}">${label}${scoreStr}${lockIcon}</button>${cameraIcon}${reschedBtn}`;
-      } else {
-        cell.innerHTML = `<span class="result-badge ${cls}" style="cursor:default;">${label}${scoreStr}${lockIcon}</span>${cameraIcon}`;
-      }
+      // Always allow tapping to view details (modal opens read-only when locked)
+      cell.innerHTML = `<button class="result-badge ${cls}" onclick="openScore('${key}')" aria-label="${label}${scoreStr}">${label}${scoreStr}${lockIcon}</button>${cameraIcon}${reschedBtn}`;
       // Row background tinted by status
       if (status === 'disputed') row.style.background = 'rgba(253,232,232,0.6)';
       else if (awaitsMine || status === 'awaitingConfirmation') row.style.background = 'rgba(255,248,214,0.5)';
