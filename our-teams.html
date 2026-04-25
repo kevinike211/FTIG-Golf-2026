@@ -1940,10 +1940,13 @@ async function scanScorecard(event) {
       'Team B is "Team ' + oppNum + '" with players: ' + teamBPlayers + '. ' +
       'On the card, players are usually identified by LAST NAME only (e.g., "' + (TEAMS[teamNum]?.players[0]?.name.split(',')[0] || '') + '"). Use these names to determine which row belongs to which team. ' +
       'IGNORE any unrelated handwritten notes, phone numbers, addresses, or messages scrawled across the card \u2014 they are not part of the scorecard data. ' +
-      '\n\nFor each team, extract:\n' +
-      '  - **MATCH POINTS** (most important): each team earns 0\u20139 points per 9-hole match, often shown as halves (\u00bd). Look for a "Points" row near each team\'s name. The point total for each team is usually written at the rightmost column of that row, and the two teams\' totals MUST sum to exactly 9 (e.g., 5\u00bd vs 3\u00bd). Convert fractions like "5\u00bd", "5 1/2", "5/2" to decimal 5.5.\n' +
-      '  - **TOTAL STROKES** (optional): the team\'s total strokes for the 9 holes, ONLY if a clean team total is written. If only individual player strokes are visible (no team total), return null \u2014 do NOT sum them yourself.\n' +
-      '\nIf a value is unclear or missing, return null. Do not guess. Set confidence to "low" if writing is messy or partly obscured.';
+      '\n\nLAYOUT: Each team has TWO horizontal rows on the card:\n' +
+      '  Row 1 (TOP) = "Points": nine cells of match points (often \u00bd, 1, or blank/dash). The points total appears in the rightmost column of this row. The two teams\' point totals MUST sum to exactly 9 (e.g., 5\u00bd + 3\u00bd = 9).\n' +
+      '  Row 2 (DIRECTLY BELOW the points row) = "Score": the team\'s TOTAL strokes for all 9 holes. The team total is written in the rightmost column of this row (e.g., 42, 45). Sometimes individual hole strokes are also written across this row, but the TOTAL is the number at the far right.\n' +
+      '\nFor each team, extract:\n' +
+      '  - **teamAPoints / teamBPoints**: the points TOTAL from row 1 (right-most cell). Convert fractions like "5\u00bd", "5 1/2", "5/2" to decimal 5.5. Required.\n' +
+      '  - **teamAScore / teamBScore**: the team\'s TOTAL STROKES from row 2 (right-most cell). Typical range is 30\u201360 for 9 holes per team. Required.\n' +
+      '\nIf a value is genuinely unreadable, return null. Do not guess. Set confidence to "low" if writing is messy or partly obscured.';
 
     const schema = {
       type: 'object',
