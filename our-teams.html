@@ -1931,11 +1931,20 @@ async function scanScorecard(event) {
   try {
     const base64 = await fileToResizedBase64(file, 1600);
 
-    const prompt = 'This is a golf scorecard for a match between Team ' + teamNum + ' and Team ' + oppNum + '. ' +
-      'Read the scorecard carefully and return the total scores and match points for each team. ' +
-      'Total scores are typically in the rightmost column labeled "Total", "Tot", or "T" \u2014 add up each team\'s strokes across the 18 holes. ' +
-      'Match points are typically 0 to 9 per team, with halves allowed (e.g., 4.5). The two teams\' points must sum to exactly 9. ' +
-      'If a value is unclear or missing, return null for that field. Do NOT guess.';
+    // Pull the player names so Gemini can match scorecard rows by player name
+    const teamAPlayers = TEAMS[teamNum] ? TEAMS[teamNum].players.map(p => p.name).join(' / ') : '';
+    const teamBPlayers = TEAMS[oppNum] ? TEAMS[oppNum].players.map(p => p.name).join(' / ') : '';
+
+    const prompt = 'This is a 9-hole golf scorecard for a match. ' +
+      'Team A is "Team ' + teamNum + '" with players: ' + teamAPlayers + '. ' +
+      'Team B is "Team ' + oppNum + '" with players: ' + teamBPlayers + '. ' +
+      'On the card, the players above will likely be identified by their LAST NAME (e.g., "' + (TEAMS[teamNum]?.players[0]?.name.split(',')[0] || '') + '"). ' +
+      'Match each row of the scorecard to the correct team using these names. ' +
+      'For each team, return: ' +
+      '  (1) teamAScore / teamBScore: the TOTAL strokes for that team across all 9 holes (sum of the row, often shown in a "Total" or "T" column). ' +
+      '  (2) teamAPoints / teamBPoints: the MATCH POINTS earned (a number from 0 to 9 with optional 0.5 halves). The two teams\' points must total exactly 9. Points may be written separately at the bottom or right side of the card. ' +
+      'If a value is genuinely unreadable or missing, return null for that field. Do not invent values. ' +
+      'Set confidence based on how clearly you can read the scorecard.';
 
     const schema = {
       type: 'object',
@@ -1978,6 +1987,7 @@ async function scanScorecard(event) {
     if (!jsonText) throw new Error('No response from model');
 
     const parsed = JSON.parse(jsonText);
+    console.log('Gemini scorecard response:', parsed);
 
     // Pre-fill the inputs
     let filled = [];
@@ -1999,7 +2009,8 @@ async function scanScorecard(event) {
     autoSelectResult();
 
     if (filled.length === 0) {
-      setScanStatus('Could not read any values from the card. Please enter them manually.', 'error');
+      const note = parsed.notes ? ' (' + parsed.notes + ')' : '';
+      setScanStatus('Could not read any values from the card.' + note + ' Please enter them manually.', 'error');
     } else {
       const msg = 'Filled: ' + filled.join(', ') + '. Please verify before saving.' + (parsed.confidence === 'low' ? ' (Low confidence \u2014 double-check!)' : '');
       setScanStatus(msg, parsed.confidence === 'low' ? 'error' : 'success');
