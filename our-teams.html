@@ -880,6 +880,14 @@ const firebaseConfig = {
   messagingSenderId: "183646321512",
   appId: "1:183646321512:web:32995fc36337b6223534dd"
 };
+// HTML-escape any value that might contain user-supplied text before
+// inserting it into innerHTML. Single source of truth used everywhere.
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
+    '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+  }[c]));
+}
+
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
@@ -1096,8 +1104,15 @@ async function deleteScoreFromFirestore(key) {
 let reschedules = {};
 let currentReschedKey = null;
 
+// Stored unsubscribe functions so we can detach listeners on logout to
+// prevent stale data leaking across user sessions on shared devices.
+let unsubReschedules = null;
+let unsubScores = null;
+let unsubConfig = null;
+
 function listenToReschedules() {
-  db.collection('reschedules').onSnapshot(snapshot => {
+  if (unsubReschedules) unsubReschedules();
+  unsubReschedules = db.collection('reschedules').onSnapshot(snapshot => {
     reschedules = {};
     snapshot.forEach(doc => { reschedules[doc.id] = doc.data(); });
     renderAllScores();
@@ -1187,7 +1202,8 @@ async function removeResched() {
 }
 
 function listenToScores() {
-  db.collection('scores').onSnapshot(snapshot => {
+  if (unsubScores) unsubScores();
+  unsubScores = db.collection('scores').onSnapshot(snapshot => {
     scores = {};
     snapshot.forEach(doc => {
       scores[doc.id] = doc.data();
@@ -1200,7 +1216,8 @@ function listenToScores() {
 
 // Listen to visible-teams config (admin-controlled, applies to all users)
 function listenToConfig() {
-  db.collection('config').doc('visibleTeams').onSnapshot(doc => {
+  if (unsubConfig) unsubConfig();
+  unsubConfig = db.collection('config').doc('visibleTeams').onSnapshot(doc => {
     const data = doc.exists ? doc.data() : null;
     const newVisible = data && Array.isArray(data.teams) && data.teams.length ? data.teams : ALL_TEAM_NUMS.slice();
     const changed = JSON.stringify(newVisible) !== JSON.stringify(visibleTeams);
@@ -1412,9 +1429,9 @@ function renderAdminPanel() {
         html += '<div class="admin-team-card-members">';
         members.forEach(u => {
           html += '<div class="admin-team-member">' +
-            `<span class="admin-mini-avatar">${initials(u.name || u.email || '?')}</span>` +
-            `<div><div class="admin-mini-name">${u.name || 'No name'}</div><div class="admin-mini-email">${u.email || ''}</div></div>` +
-            `<button class="admin-mini-btn" onclick="updateUserRole('${u.uid}', '')" title="Unassign">\u00d7</button>` +
+            `<span class="admin-mini-avatar">${esc(initials(u.name || u.email || '?'))}</span>` +
+            `<div><div class="admin-mini-name">${esc(u.name || 'No name')}</div><div class="admin-mini-email">${esc(u.email || '')}</div></div>` +
+            `<button class="admin-mini-btn" data-uid="${esc(u.uid)}" data-action="unassign" title="Unassign">\u00d7</button>` +
             '</div>';
         });
         html += '</div>';
@@ -1470,20 +1487,51 @@ function renderAdminUsersListHTML() {
       teamOptions += `<option value="${n}"${selected}>Team ${n}</option>`;
     });
     const isMe = currentUser && currentUser.uid === u.uid;
-    const removeBtn = isMe ? '' : `<button class="admin-mini-btn admin-remove-btn" onclick="removeUserConfirm('${u.uid}', '${(u.name || u.email || '').replace(/'/g,"\\'")}')" title="Remove user">\u00d7</button>`;
+    // Use data-* attributes + delegated events instead of inline onclick to keep
+    // user-supplied strings (name/email) out of JS string contexts entirely.
+    const removeBtn = isMe ? '' : `<button class="admin-mini-btn admin-remove-btn" data-uid="${esc(u.uid)}" data-action="remove" data-name="${esc(u.name || u.email || '')}" title="Remove user">\u00d7</button>`;
     return '<div class="admin-user-card">' +
-      `<div class="admin-user-avatar">${initials(u.name || u.email || '?')}</div>` +
+      `<div class="admin-user-avatar">${esc(initials(u.name || u.email || '?'))}</div>` +
       '<div class="admin-user-main">' +
-        `<div class="admin-user-name">${u.name || 'No name'} ${roleBadge}${isMe ? ' <span class="admin-you-tag">you</span>' : ''}</div>` +
-        `<div class="admin-user-email">${u.email || ''}</div>` +
+        `<div class="admin-user-name">${esc(u.name || 'No name')} ${roleBadge}${isMe ? ' <span class="admin-you-tag">you</span>' : ''}</div>` +
+        `<div class="admin-user-email">${esc(u.email || '')}</div>` +
       '</div>' +
-      `<select class="admin-select" onchange="updateUserRole('${u.uid}', this.value)">${teamOptions}</select>` +
+      `<select class="admin-select" data-uid="${esc(u.uid)}" data-action="role">${teamOptions}</select>` +
       removeBtn +
       '</div>';
   }).join('');
 }
 
+// Delegated event handler for the admin panel \u2014 replaces inline onclick handlers
+// so user-supplied strings (name/email) are never interpolated into JS contexts.
+document.addEventListener('change', e => {
+  const sel = e.target.closest('select.admin-select[data-action="role"]');
+  if (sel) updateUserRole(sel.dataset.uid, sel.value);
+});
+document.addEventListener('click', e => {
+  const btn = e.target.closest('button[data-action]');
+  if (!btn) return;
+  if (btn.dataset.action === 'remove') {
+    removeUserConfirm(btn.dataset.uid, btn.dataset.name || '');
+  } else if (btn.dataset.action === 'unassign') {
+    updateUserRole(btn.dataset.uid, '');
+  }
+});
+
 async function removeUserConfirm(uid, name) {
+  // Cannot remove yourself or the last admin
+  if (currentUser && currentUser.uid === uid) {
+    showToast('You can\u2019t remove your own account');
+    return;
+  }
+  const target = adminUsersCache.find(u => u.uid === uid);
+  if (target && target.role === 'admin') {
+    const adminCount = adminUsersCache.filter(u => u.role === 'admin').length;
+    if (adminCount <= 1) {
+      showToast('Cannot remove the last admin \u2014 promote someone else first');
+      return;
+    }
+  }
   if (!confirm('Remove ' + (name || 'this user') + '? They\u2019ll lose access until they\u2019re re-added by an admin.')) return;
   try {
     await db.collection('users').doc(uid).delete();
@@ -1525,6 +1573,20 @@ function closeAdminPanel() {
 }
 
 async function updateUserRole(uid, value) {
+  // Prevent removing the last admin in the league. If this update would
+  // demote a current admin and they are the only one, refuse and re-render
+  // to revert any visual change in the dropdown.
+  if (value !== 'admin') {
+    const target = adminUsersCache.find(u => u.uid === uid);
+    if (target && target.role === 'admin') {
+      const adminCount = adminUsersCache.filter(u => u.role === 'admin').length;
+      if (adminCount <= 1) {
+        showToast('Cannot demote the last admin \u2014 promote someone else first');
+        await refreshAdminUsers();
+        return;
+      }
+    }
+  }
   if (value === 'admin') {
     await db.collection('users').doc(uid).update({ role: 'admin', teamNum: null });
   } else if (value) {
@@ -1541,21 +1603,24 @@ let currentImages = [];
 const MAX_IMAGES = 2;
 
 function resizeImage(file, maxWidth) {
-  return new Promise(resolve => {
+  return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = e => {
       const img = new Image();
       img.onload = () => {
-        if (img.width <= maxWidth) { resolve(e.target.result); return; }
+        // Always re-encode through canvas so the output is bounded \u2014 a
+        // narrow-but-tall image would otherwise be stored at full size.
         const canvas = document.createElement('canvas');
-        const scale = maxWidth / img.width;
-        canvas.width = maxWidth;
-        canvas.height = img.height * scale;
+        const scale = img.width > maxWidth ? maxWidth / img.width : 1;
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
         canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
         resolve(canvas.toDataURL('image/jpeg', 0.85));
       };
+      img.onerror = reject;
       img.src = e.target.result;
     };
+    reader.onerror = reject;
     reader.readAsDataURL(file);
   });
 }
@@ -1581,16 +1646,27 @@ function renderImageSlots() {
   }
 }
 
+// Hard limit on uploaded image size to prevent resource abuse and IndexedDB bloat.
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8 MB
+function validateImageFile(file) {
+  if (!file) return 'No file selected';
+  if (!file.type || !file.type.startsWith('image/')) return 'File must be an image';
+  if (file.size > MAX_IMAGE_BYTES) return 'Image too large (max 8 MB)';
+  return null; // valid
+}
+
 async function handleImageUpload(event) {
   const file = event.target.files[0];
+  event.target.value = '';
   if (!file) return;
+  const err = validateImageFile(file);
+  if (err) { showToast(err); return; }
   if (currentImages.length >= MAX_IMAGES) { showToast('Maximum 2 images per match'); return; }
   try {
     const resized = await resizeImage(file, 1200);
     currentImages.push(resized);
     renderImageSlots();
-  } catch(err) { showToast('Failed to load image'); }
-  event.target.value = '';
+  } catch(e) { showToast('Failed to load image'); }
 }
 
 function removeImage(index) {
@@ -1839,7 +1915,7 @@ function renderAllScores() {
       if (resched) {
         row.classList.add('rescheduled');
         const newDateFmt = formatDate(resched.newDate);
-        dateCell.innerHTML = `${origDate}<span class="resched-badge">Rescheduled</span><span class="resched-new-date">\u2192 ${newDateFmt}</span>${resched.reason ? '<span class="resched-note">' + resched.reason + '</span>' : ''}`;
+        dateCell.innerHTML = `${esc(origDate)}<span class="resched-badge">Rescheduled</span><span class="resched-new-date">\u2192 ${esc(newDateFmt)}</span>${resched.reason ? '<span class="resched-note">' + esc(resched.reason) + '</span>' : ''}`;
       } else {
         row.classList.remove('rescheduled');
         // Only reset if it was previously rescheduled (has badge markup)
@@ -2159,8 +2235,8 @@ function openScore(key) {
     const teamScoreDisplay = existing.playerScores?.[0]?.score || '\u2014';
     const oppScoreDisplay = existing.playerScores?.[1]?.score || '\u2014';
     document.getElementById('confirm-banner-values').innerHTML =
-      '<strong>' + teamPtsLabel + ':</strong> ' + pts0Display + ' pts / ' + teamScoreDisplay + ' strokes<br>' +
-      '<strong>' + oppPtsLabel + ':</strong> ' + pts1Display + ' pts / ' + oppScoreDisplay + ' strokes';
+      '<strong>' + esc(teamPtsLabel) + ':</strong> ' + esc(pts0Display) + ' pts / ' + esc(teamScoreDisplay) + ' strokes<br>' +
+      '<strong>' + esc(oppPtsLabel) + ':</strong> ' + esc(pts1Display) + ' pts / ' + esc(oppScoreDisplay) + ' strokes';
   } else if (status === 'awaitingConfirmation' && existing) {
     const sb = document.getElementById('status-banner');
     sb.className = 'status-banner awaiting';
@@ -2287,8 +2363,10 @@ function fileToResized(file, maxWidth) {
 
 async function scanScorecard(event) {
   const file = event.target.files[0];
-  if (!file) return;
   event.target.value = '';
+  if (!file) return;
+  const validationErr = validateImageFile(file);
+  if (validationErr) { setScanStatus(validationErr, 'error'); return; }
 
   // Get team numbers from the modal context
   const parts = currentScoreKey.split('-');
@@ -3057,7 +3135,13 @@ auth.onAuthStateChanged(async (user) => {
       renderAllScores();
     }
   } else {
-    // Logged out
+    // Logged out \u2014 detach Firestore listeners so the next signed-in user
+    // doesn't briefly see this user's data.
+    if (unsubReschedules) { unsubReschedules(); unsubReschedules = null; }
+    if (unsubScores)      { unsubScores();      unsubScores = null; }
+    if (unsubConfig)      { unsubConfig();      unsubConfig = null; }
+    GEMINI_API_KEY = null; // force re-fetch under next login
+    appInitialized = false;
     currentUser = null;
     userRole = null;
     userTeamNum = null;

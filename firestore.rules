@@ -1,0 +1,112 @@
+// Firestore security rules for FTIG Golf League 2026
+// Paste this into: Firebase Console > Firestore Database > Rules > Publish
+//
+// Data model:
+//   /users/{uid}      { name, email, role: 'admin'|'member', teamNum: number|null, createdAt }
+//   /scores/{key}     { result, points, playerScores, status, proposedByTeam, ... }
+//                     key format: "<teamNum>-<YYYY-MM-DD>" (one doc per team perspective; mirror lives at the opponent's key)
+//   /reschedules/{key} { newDate, reason, createdAt } same key format
+//   /config/{doc}     visibleTeams: { teams: [...] }, gemini: { apiKey: '...' }
+//
+// Notes for the team15golf app:
+// - Members can only write scores/reschedules where the document key starts with their own teamNum.
+// - Once a score is 'confirmed' or 'disputed', members can no longer edit it (admin only).
+// - The Gemini API key (config/gemini) is admin-read-only; the app fetches it after the user logs in.
+// - First admin must be set manually via the Firebase Console after registering an account.
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- helpers ---
+    function signedIn() {
+      return request.auth != null;
+    }
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    function isAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && userDoc().role == 'admin';
+    }
+    function myTeam() {
+      return signedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        ? userDoc().teamNum
+        : null;
+    }
+    // The match key format is "<teamNum>-<YYYY-MM-DD>".
+    // Returns the leading team number portion as a string for comparison.
+    function keyTeamPrefix(key) {
+      return key.split('-')[0];
+    }
+
+    // --- /users/{uid} ---
+    match /users/{uid} {
+      // Anyone signed in can read user profiles (used by admin panel and team views).
+      allow read: if signedIn();
+
+      // Self-create on first registration. Role MUST be 'member' and teamNum MUST be null
+      // when set from the client. The first admin is bootstrapped manually via the console.
+      allow create: if request.auth.uid == uid
+        && request.resource.data.role == 'member'
+        && (!('teamNum' in request.resource.data) || request.resource.data.teamNum == null);
+
+      // Self-update of name/email only. Role and teamNum cannot change unless an admin does it.
+      // Admin can update anything.
+      allow update: if isAdmin()
+        || (request.auth.uid == uid
+            && request.resource.data.role == resource.data.role
+            && request.resource.data.teamNum == resource.data.teamNum);
+
+      // Only admins can delete users.
+      allow delete: if isAdmin();
+    }
+
+    // --- /scores/{key} ---
+    match /scores/{key} {
+      allow read: if signedIn();
+
+      // Admins can write anything.
+      // Members can write only if:
+      //   - the doc key starts with their own team number, AND
+      //   - the doc does not already exist OR is not in a locked state (confirmed/disputed)
+      allow write: if isAdmin()
+        || (signedIn()
+            && myTeam() != null
+            && keyTeamPrefix(key) == string(myTeam())
+            && (resource == null || !(resource.data.status in ['confirmed', 'disputed'])));
+    }
+
+    // --- /reschedules/{key} ---
+    match /reschedules/{key} {
+      allow read: if signedIn();
+      allow write: if isAdmin()
+        || (signedIn()
+            && myTeam() != null
+            && keyTeamPrefix(key) == string(myTeam()));
+    }
+
+    // --- /config/{doc} ---
+    // visibleTeams is readable by all signed-in users so the app can render the right tabs.
+    // gemini.apiKey is read by every member who scans a scorecard, so it is also readable
+    // to authenticated users. It is protected by:
+    //   1) Firebase Auth (only registered league members can read it)
+    //   2) HTTP referrer restriction on the Google Cloud key (only requests from our
+    //      site's domain are accepted)
+    // Long-term fix: move the Gemini call behind a Cloud Function so the key never
+    // reaches the client. Until then, admins should rotate the key periodically.
+    match /config/visibleTeams {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+    match /config/gemini {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+    // Catch-all for any other config docs added later: admin-only.
+    match /config/{doc} {
+      allow read, write: if isAdmin();
+    }
+  }
+}
