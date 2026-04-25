@@ -766,9 +766,27 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 
 // ── GEMINI API (for scorecard OCR) ──
-const GEMINI_API_KEY = "AIzaSyA1fhT8Jh_nN-MBqvoj8EMHHAXKLaIuCnU";
+// API key is NOT hardcoded here \u2014 Google's leak scanner disables keys found
+// in public repos. It is stored in Firestore at config/gemini.apiKey and
+// fetched after the user authenticates (see loadGeminiKey below).
+let GEMINI_API_KEY = null;
 const GEMINI_MODEL = "gemini-2.5-flash";
-const GEMINI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent?key=' + GEMINI_API_KEY;
+function geminiEndpoint() {
+  return 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent?key=' + GEMINI_API_KEY;
+}
+
+async function loadGeminiKey() {
+  if (GEMINI_API_KEY) return GEMINI_API_KEY;
+  try {
+    const doc = await db.collection('config').doc('gemini').get();
+    if (doc.exists && doc.data().apiKey) {
+      GEMINI_API_KEY = doc.data().apiKey;
+    }
+  } catch(e) {
+    console.warn('Could not load Gemini API key from Firestore', e);
+  }
+  return GEMINI_API_KEY;
+}
 
 // ── AUTH STATE ──
 let currentUser = null;
@@ -1929,6 +1947,11 @@ async function scanScorecard(event) {
   setScanStatus('Reading card...', 'info');
 
   try {
+    // Make sure the API key has been loaded from Firestore
+    await loadGeminiKey();
+    if (!GEMINI_API_KEY) {
+      throw new Error('Gemini API key not configured. Ask an admin to add it to Firestore at config/gemini.apiKey.');
+    }
     const base64 = await fileToResizedBase64(file, 1600);
 
     // Pull the player names so Gemini can match scorecard rows by player name
@@ -1975,7 +1998,7 @@ async function scanScorecard(event) {
       }
     };
 
-    const resp = await fetch(GEMINI_ENDPOINT, {
+    const resp = await fetch(geminiEndpoint(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
@@ -2527,6 +2550,7 @@ auth.onAuthStateChanged(async (user) => {
         listenToScores();
         listenToReschedules();
         listenToConfig();
+        loadGeminiKey(); // prefetch the scorecard-scan API key
         highlightDates();
       });
     } else {
