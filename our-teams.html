@@ -176,6 +176,8 @@
   .note-cell { color: var(--text-secondary); font-size: 13px; font-style: italic; }
   .note-cell strong { color: var(--gold); font-style: normal; font-weight: 500; }
   .opp-num-cell { width: 36px; color: var(--text-muted); font-size: 13px; text-align: center; }
+  /* Inline team number shown only on mobile (the # column is hidden there) */
+  .opp-num-inline { display: none; color: var(--text-muted); font-weight: 500; margin-right: 2px; }
   .score-cell { width: 130px; }
 
   .course-badge { display: inline-block; font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
@@ -434,9 +436,10 @@
     .course-cell { width: 60px; padding: 8px 4px !important; }
     .course-cell .course-badge { font-size: 9px; padding: 2px 6px; }
 
-    /* Hide the redundant team-number column on mobile (opponent name implies it) */
+    /* Hide the # column on mobile, show the team number inline with the opponent name instead */
     .schedule-table .opp-num-cell { display: none; }
     .schedule-table thead th.opp-num-cell { display: none; }
+    .opp-num-inline { display: inline; }
 
     /* Compact opponent name + score column */
     .opp-link { font-size: 12px; line-height: 1.2; word-break: break-word; }
@@ -1638,7 +1641,7 @@ function buildScheduleRows(teamNum) {
     rows += `<tr data-course="${m.c}" data-date="${m.d}" data-key="${key}" data-team="${teamNum}">` +
       `<td class="date-col">${dateFmt}</td>` +
       `<td class="course-cell"><span class="course-badge ${courseClass}">${courseTxt}</span></td>` +
-      `<td><button class="opp-link" onclick="openContact(${m.o},'${dateFmt} @ ${courseTxt}')" aria-label="View contact info for ${oppNames}">${oppNames}</button></td>` +
+      `<td><button class="opp-link" onclick="openContact(${m.o},'${dateFmt} @ ${courseTxt}')" aria-label="View contact info for Team ${m.o} ${oppNames}"><span class="opp-num-inline">#${m.o}</span> ${oppNames}</button></td>` +
       `<td class="opp-num-cell">${m.o}</td>` +
       `<td class="score-cell" id="sc-${key}"></td>` +
       `</tr>`;
