@@ -425,15 +425,25 @@
     .filter-bar { gap: 6px; }
     .filter-btn { font-size: 12px; padding: 5px 12px; }
 
-    /* Make table scroll horizontally on small screens */
-    .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -0.75rem; padding: 0 0.75rem; }
-    .schedule-table, .playoffs-table { min-width: 520px; }
+    /* Schedule fits on phone screens \u2014 no horizontal scroll */
+    .table-wrapper { overflow-x: visible; margin: 0; padding: 0; }
+    .schedule-table, .playoffs-table { min-width: 0; table-layout: fixed; }
 
-    .schedule-table td { padding: 9px 10px; font-size: 13px; }
-    .date-col { width: 68px; }
-    .course-cell { width: 90px; }
-    .opp-num-cell { width: 30px; }
-    .score-cell { width: 110px; }
+    .schedule-table td, .schedule-table thead th { padding: 8px 6px; font-size: 12px; }
+    .date-col { width: 56px; white-space: nowrap; }
+    .course-cell { width: 60px; padding: 8px 4px !important; }
+    .course-cell .course-badge { font-size: 9px; padding: 2px 6px; }
+
+    /* Hide the redundant team-number column on mobile (opponent name implies it) */
+    .schedule-table .opp-num-cell { display: none; }
+    .schedule-table thead th.opp-num-cell { display: none; }
+
+    /* Compact opponent name + score column */
+    .opp-link { font-size: 12px; line-height: 1.2; word-break: break-word; }
+    .score-cell { width: auto; padding: 8px 4px !important; text-align: right; }
+    .result-badge { font-size: 11px; padding: 3px 8px; white-space: nowrap; }
+    .score-entry-btn { font-size: 11px; padding: 3px 10px; white-space: nowrap; }
+    .resched-btn { width: 22px !important; height: 22px !important; padding: 0 !important; }
 
     .modal { width: 95%; }
     .score-modal { width: 95%; }
