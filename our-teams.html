@@ -1664,10 +1664,12 @@ function buildTeamPanel(teamNum) {
   html += `<div class="filter-bar" role="toolbar" aria-label="Filter matches">
     <span class="filter-label" id="filter-label-${teamNum}">Show:</span>
     <button class="filter-btn active" onclick="setFilter('all',this,'${teamNum}')" aria-pressed="true">All</button>
-    <button class="filter-btn" onclick="setFilter('manada',this,'${teamNum}')" aria-pressed="false">Manada</button>
-    <button class="filter-btn" onclick="setFilter('blue',this,'${teamNum}')" aria-pressed="false">Blue Mtn.</button>
+    <button class="filter-btn" onclick="setFilter('past',this,'${teamNum}')" aria-pressed="false">Past</button>
+    <button class="filter-btn" onclick="setFilter('upcoming',this,'${teamNum}')" aria-pressed="false">Upcoming</button>
     <button class="filter-btn" onclick="setFilter('scored',this,'${teamNum}')" aria-pressed="false">Scored</button>
     <button class="filter-btn" onclick="setFilter('unscored',this,'${teamNum}')" aria-pressed="false">Unscored</button>
+    <button class="filter-btn" onclick="setFilter('manada',this,'${teamNum}')" aria-pressed="false">Manada</button>
+    <button class="filter-btn" onclick="setFilter('blue',this,'${teamNum}')" aria-pressed="false">Blue Mtn.</button>
   </div>`;
 
   // Section heading
@@ -2898,6 +2900,7 @@ function setFilter(filter, btn, teamNum) {
   btn.classList.add('active');
   btn.setAttribute('aria-pressed', 'true');
   // Find tbody for this team - could be body-{num} or detail-body-{num}
+  const today = new Date(); today.setHours(0,0,0,0);
   const bodies = panel.querySelectorAll('tbody');
   bodies.forEach(tbody => {
     tbody.querySelectorAll('tr[data-key]').forEach(row => {
@@ -2906,7 +2909,26 @@ function setFilter(filter, btn, teamNum) {
       if (filter==='blue') { row.classList.toggle('hidden', row.dataset.course!=='blue'); return; }
       if (filter==='scored') { row.classList.toggle('hidden', row.dataset.scored!=='true'); return; }
       if (filter==='unscored') { row.classList.toggle('hidden', row.dataset.scored==='true'); return; }
+      if (filter==='past') {
+        const d = row.dataset.date ? new Date(row.dataset.date+'T00:00:00') : null;
+        row.classList.toggle('hidden', !d || d >= today);
+        return;
+      }
+      if (filter==='upcoming') {
+        const d = row.dataset.date ? new Date(row.dataset.date+'T00:00:00') : null;
+        row.classList.toggle('hidden', !d || d < today);
+        return;
+      }
     });
+  });
+  // Also hide makeup/note rows when filtering past/upcoming so the table stays tidy
+  const noteRows = panel.querySelectorAll('tr.note-row');
+  noteRows.forEach(r => {
+    if (filter === 'past' || filter === 'upcoming' || filter === 'scored' || filter === 'unscored') {
+      r.classList.add('hidden');
+    } else {
+      r.classList.remove('hidden');
+    }
   });
 }
 
