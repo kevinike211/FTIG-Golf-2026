@@ -427,13 +427,13 @@
     .filter-bar { gap: 6px; }
     .filter-btn { font-size: 12px; padding: 5px 12px; }
 
-    /* Schedule fits on phone screens \u2014 no horizontal scroll */
+    /* Schedule fits on phone screens \u2014 no horizontal scroll, opponent column flexes */
     .table-wrapper { overflow-x: visible; margin: 0; padding: 0; }
-    .schedule-table, .playoffs-table { min-width: 0; table-layout: fixed; }
+    .schedule-table, .playoffs-table { min-width: 0; table-layout: auto; width: 100%; }
 
     .schedule-table td, .schedule-table thead th { padding: 8px 6px; font-size: 12px; }
-    .date-col { width: 56px; white-space: nowrap; }
-    .course-cell { width: 60px; padding: 8px 4px !important; }
+    .date-col { width: 1%; white-space: nowrap; padding: 8px 6px !important; }
+    .course-cell { width: 1%; padding: 8px 4px !important; white-space: nowrap; }
     .course-cell .course-badge { font-size: 9px; padding: 2px 6px; }
 
     /* Hide the # column on mobile, show the team number inline with the opponent name instead */
@@ -441,9 +441,12 @@
     .schedule-table thead th.opp-num-cell { display: none; }
     .opp-num-inline { display: inline; }
 
-    /* Compact opponent name + score column */
-    .opp-link { font-size: 12px; line-height: 1.2; word-break: break-word; }
-    .score-cell { width: auto; padding: 8px 4px !important; text-align: right; }
+    /* Opponent column takes all remaining width */
+    .schedule-table td:nth-child(3) { width: auto; }
+    .opp-link { font-size: 13px; line-height: 1.3; word-break: break-word; white-space: normal; text-align: left; }
+
+    /* Score column shrinks to fit the badge */
+    .score-cell { width: 1%; padding: 8px 4px !important; text-align: right; white-space: nowrap; }
     .result-badge { font-size: 11px; padding: 3px 8px; white-space: nowrap; }
     .score-entry-btn { font-size: 11px; padding: 3px 10px; white-space: nowrap; }
     .resched-btn { width: 22px !important; height: 22px !important; padding: 0 !important; }
