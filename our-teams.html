@@ -2066,7 +2066,9 @@ function openScore(key) {
     if (existing.playerScores) {
       existing.playerScores.forEach((ps, i) => {
         const inp = document.getElementById('pi-'+i);
-        if (inp && ps.score && !inp.disabled) inp.value = ps.score;
+        // Always show saved values even if the input is disabled \u2014 disabled
+        // means "can't edit", not "can't display".
+        if (inp && ps.score != null) inp.value = ps.score;
       });
     }
     // Update auto message for non-admins
