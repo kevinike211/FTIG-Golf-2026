@@ -2046,7 +2046,9 @@ function setScanStatus(msg, kind) {
   if (btnText) btnText.textContent = kind === 'info' ? 'Reading card...' : 'Scan Scorecard';
 }
 
-function fileToResizedBase64(file, maxWidth) {
+// Returns { dataUrl, base64 } so the same resized image can be both
+// saved to the match (data URL) and sent to Gemini (raw base64).
+function fileToResized(file, maxWidth) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = e => {
@@ -2058,7 +2060,7 @@ function fileToResizedBase64(file, maxWidth) {
         canvas.height = img.height * scale;
         canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
         const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-        resolve(dataUrl.split(',')[1]); // strip prefix
+        resolve({ dataUrl, base64: dataUrl.split(',')[1] });
       };
       img.onerror = reject;
       img.src = e.target.result;
@@ -2088,7 +2090,18 @@ async function scanScorecard(event) {
     if (!GEMINI_API_KEY) {
       throw new Error('Gemini API key not configured. Ask an admin to add it to Firestore at config/gemini.apiKey.');
     }
-    const base64 = await fileToResizedBase64(file, 1600);
+    const { dataUrl, base64 } = await fileToResized(file, 1600);
+
+    // Save the scorecard image to the match (if there's room).
+    // Gives us a permanent visual record alongside the extracted values.
+    if (currentImages.length < MAX_IMAGES) {
+      currentImages.push(dataUrl);
+      renderImageSlots();
+    } else {
+      // Replace the first image so the latest scorecard is always saved
+      currentImages[0] = dataUrl;
+      renderImageSlots();
+    }
 
     // Pull the player names so Gemini can match scorecard rows by player name
     const teamAPlayers = TEAMS[teamNum] ? TEAMS[teamNum].players.map(p => p.name).join(' / ') : '';
