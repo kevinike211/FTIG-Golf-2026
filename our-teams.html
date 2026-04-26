@@ -505,6 +505,7 @@
   .auth-btn-primary:hover { background: var(--green-mid); }
   .auth-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
   .auth-error { background: var(--loss); color: var(--loss-text); padding: 8px 12px; border-radius: var(--radius); font-size: 13px; margin-bottom: 10px; }
+  .auth-success { background: var(--win); color: var(--win-text); padding: 10px 14px; border-radius: var(--radius); font-size: 13px; margin-bottom: 10px; line-height: 1.4; }
   .auth-switch { text-align: center; font-size: 13px; color: var(--text-muted); margin-top: 12px; }
   .auth-link { background: none; border: none; color: var(--green-dark); font-weight: 500; cursor: pointer; text-decoration: underline; font-size: 13px; font-family: 'DM Sans', sans-serif; }
 
@@ -1308,6 +1309,13 @@ async function doRegister() {
   }
 }
 
+function showAuthSuccess(msg) {
+  const el = document.getElementById('auth-error');
+  el.textContent = msg;
+  el.className = 'auth-success';
+  el.style.display = 'block';
+}
+
 async function doPasswordReset() {
   const emailInput = document.getElementById('auth-email');
   const email = (emailInput.value || '').trim();
@@ -1318,17 +1326,18 @@ async function doPasswordReset() {
   }
   try {
     await auth.sendPasswordResetEmail(email);
-    // Generic message either way to avoid leaking which emails are registered
-    showAuthError('');
-    document.getElementById('auth-error').style.display = 'none';
-    showToast('If that email is registered, a reset link is on the way.');
+    // Clear the password field and show a prominent confirmation in place
+    document.getElementById('auth-password').value = '';
+    showAuthSuccess('✓ Reset email sent to ' + email + '. Check your inbox (and spam folder) for a link to set a new password.');
   } catch(e) {
     console.error('[reset] failed:', e.code || '', e.message);
-    // Even on error, show a generic message (e.g. invalid-email is OK to surface)
     if (e.code === 'auth/invalid-email') {
       showAuthError('That doesn’t look like a valid email address.');
+    } else if (e.code === 'auth/user-not-found') {
+      // Don't reveal whether the email exists — same generic success message
+      showAuthSuccess('✓ If ' + email + ' is registered, a reset link is on the way. Check your inbox (and spam folder).');
     } else {
-      showToast('If that email is registered, a reset link is on the way.');
+      showAuthError('Could not send reset email. Try again in a moment.');
     }
   }
 }
@@ -1347,6 +1356,7 @@ document.addEventListener('input', e => {
 function showAuthError(msg) {
   const el = document.getElementById('auth-error');
   el.textContent = msg;
+  el.className = 'auth-error';
   el.style.display = 'block';
 }
 
