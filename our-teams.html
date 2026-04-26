@@ -1320,7 +1320,7 @@ async function doPasswordReset() {
   const emailInput = document.getElementById('auth-email');
   const email = (emailInput.value || '').trim();
   if (!email) {
-    showAuthError('Enter your email address above, then tap "Forgot password?"');
+    showAuthError('Please enter your email address first, then tap "Forgot password?"');
     emailInput.focus();
     return;
   }
