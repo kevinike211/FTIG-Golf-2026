@@ -623,6 +623,7 @@
         <input type="text" id="reg-name" class="auth-input" placeholder="Full name">
         <input type="email" id="reg-email" class="auth-input" placeholder="Email address">
         <input type="password" id="reg-password" class="auth-input" placeholder="Password (min 6 characters)">
+        <input type="text" id="reg-team" class="auth-input" placeholder="Team number (optional)" inputmode="numeric" pattern="[0-9]*" maxlength="2" autocomplete="off">
         <button class="auth-btn auth-btn-primary" onclick="doRegister()">Create Account</button>
         <p class="auth-switch">Already have an account? <button class="auth-link" onclick="showLogin()">Sign In</button></p>
       </div>
@@ -1264,7 +1265,24 @@ async function doRegister() {
   const name = document.getElementById('reg-name').value.trim();
   const email = document.getElementById('reg-email').value.trim();
   const password = document.getElementById('reg-password').value;
+  const teamRaw = document.getElementById('reg-team').value.trim();
   if (!name || !email || !password) { showAuthError('Please fill in all fields'); return; }
+
+  // Optional team number: if provided, must be a 1-2 digit integer in our valid team list
+  let teamNum = null;
+  if (teamRaw) {
+    if (!/^\d{1,2}$/.test(teamRaw)) {
+      showAuthError('Team number must be 1 or 2 digits');
+      return;
+    }
+    const n = parseInt(teamRaw, 10);
+    if (!ALL_TEAM_NUMS.includes(n)) {
+      showAuthError('Team ' + n + ' is not a valid team in this league');
+      return;
+    }
+    teamNum = n;
+  }
+
   try {
     // Check if this is the first user
     const existingUsers = await db.collection('users').limit(1).get();
@@ -1275,12 +1293,14 @@ async function doRegister() {
       name: name,
       email: email,
       role: isFirstUser ? 'admin' : 'member',
-      teamNum: null,
+      teamNum: isFirstUser ? null : teamNum, // first user is admin, no team
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
 
     if (isFirstUser) {
       showToast('Welcome! You are the first user and have been made admin.');
+    } else if (teamNum) {
+      showToast('Welcome! Pre-assigned to Team ' + teamNum + '.');
     }
   } catch(e) {
     showAuthError(e.message.replace('Firebase: ', '').replace(/\(auth\/.*\)/, '').trim());
@@ -1290,6 +1310,13 @@ async function doRegister() {
 function doLogout() {
   auth.signOut();
 }
+
+// Strip any non-digit characters typed into the registration team-number field
+document.addEventListener('input', e => {
+  if (e.target && e.target.id === 'reg-team') {
+    e.target.value = e.target.value.replace(/\D/g, '').slice(0, 2);
+  }
+});
 
 function showAuthError(msg) {
   const el = document.getElementById('auth-error');

@@ -46,11 +46,16 @@ service cloud.firestore {
       // Anyone signed in can read user profiles (used by admin panel and team views).
       allow read: if signedIn();
 
-      // Self-create on first registration. Role MUST be 'member' and teamNum MUST be null
-      // when set from the client. The first admin is bootstrapped manually via the console.
+      // Self-create on first registration. Role MUST be 'member'. teamNum may be null
+      // OR an integer 1-99 (the registration form lets users pre-select their team).
+      // The first admin is bootstrapped manually via the console.
       allow create: if request.auth.uid == uid
         && request.resource.data.role == 'member'
-        && (!('teamNum' in request.resource.data) || request.resource.data.teamNum == null);
+        && (!('teamNum' in request.resource.data)
+            || request.resource.data.teamNum == null
+            || (request.resource.data.teamNum is int
+                && request.resource.data.teamNum >= 1
+                && request.resource.data.teamNum <= 99));
 
       // Self-update of name/email only. Role and teamNum cannot change unless an admin does it.
       // Admin can update anything.
