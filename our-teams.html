@@ -10,6 +10,7 @@
 <!-- PWA -->
 <link rel="manifest" href="manifest-our-teams.json">
 <meta name="theme-color" content="#1a3a2a">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="FTIG Golf 3 Teams">
@@ -1287,10 +1288,11 @@ async function doRegister() {
     // Create the auth account first — we need to be signed in before we can
     // write to Firestore under the new security rules.
     const cred = await auth.createUserWithEmailAndPassword(email, password);
+    console.log('[register] auth ok, uid =', cred.user.uid, '— writing user doc');
     await db.collection('users').doc(cred.user.uid).set({
       name: name,
       email: email,
-      role: 'member', // first admin is bootstrapped manually via Firebase Console
+      role: 'member',
       teamNum: teamNum,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
@@ -1300,6 +1302,7 @@ async function doRegister() {
       showToast('Welcome! Ask an admin to assign you to a team.');
     }
   } catch(e) {
+    console.error('[register] failed:', e.code || '', e.message);
     showAuthError(e.message.replace('Firebase: ', '').replace(/\(auth\/.*\)/, '').trim());
   }
 }
