@@ -1284,23 +1284,20 @@ async function doRegister() {
   }
 
   try {
-    // Check if this is the first user
-    const existingUsers = await db.collection('users').limit(1).get();
-    const isFirstUser = existingUsers.empty;
-
+    // Create the auth account first — we need to be signed in before we can
+    // write to Firestore under the new security rules.
     const cred = await auth.createUserWithEmailAndPassword(email, password);
     await db.collection('users').doc(cred.user.uid).set({
       name: name,
       email: email,
-      role: isFirstUser ? 'admin' : 'member',
-      teamNum: isFirstUser ? null : teamNum, // first user is admin, no team
+      role: 'member', // first admin is bootstrapped manually via Firebase Console
+      teamNum: teamNum,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
-
-    if (isFirstUser) {
-      showToast('Welcome! You are the first user and have been made admin.');
-    } else if (teamNum) {
+    if (teamNum) {
       showToast('Welcome! Pre-assigned to Team ' + teamNum + '.');
+    } else {
+      showToast('Welcome! Ask an admin to assign you to a team.');
     }
   } catch(e) {
     showAuthError(e.message.replace('Firebase: ', '').replace(/\(auth\/.*\)/, '').trim());
