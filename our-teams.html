@@ -618,6 +618,7 @@
         <input type="email" id="auth-email" class="auth-input" placeholder="Email address">
         <input type="password" id="auth-password" class="auth-input" placeholder="Password">
         <button class="auth-btn auth-btn-primary" onclick="doLogin()">Sign In</button>
+        <p class="auth-switch"><button class="auth-link" onclick="doPasswordReset()">Forgot password?</button></p>
         <p class="auth-switch">Don't have an account? <button class="auth-link" onclick="showRegister()">Register</button></p>
       </div>
       <div id="auth-register-form" style="display:none;">
@@ -1304,6 +1305,31 @@ async function doRegister() {
   } catch(e) {
     console.error('[register] failed:', e.code || '', e.message);
     showAuthError(e.message.replace('Firebase: ', '').replace(/\(auth\/.*\)/, '').trim());
+  }
+}
+
+async function doPasswordReset() {
+  const emailInput = document.getElementById('auth-email');
+  const email = (emailInput.value || '').trim();
+  if (!email) {
+    showAuthError('Enter your email address above, then tap "Forgot password?"');
+    emailInput.focus();
+    return;
+  }
+  try {
+    await auth.sendPasswordResetEmail(email);
+    // Generic message either way to avoid leaking which emails are registered
+    showAuthError('');
+    document.getElementById('auth-error').style.display = 'none';
+    showToast('If that email is registered, a reset link is on the way.');
+  } catch(e) {
+    console.error('[reset] failed:', e.code || '', e.message);
+    // Even on error, show a generic message (e.g. invalid-email is OK to surface)
+    if (e.code === 'auth/invalid-email') {
+      showAuthError('That doesn’t look like a valid email address.');
+    } else {
+      showToast('If that email is registered, a reset link is on the way.');
+    }
   }
 }
 
