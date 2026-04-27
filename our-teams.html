@@ -505,7 +505,7 @@
   .auth-btn-primary:hover { background: var(--green-mid); }
   .auth-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
   .auth-error { background: var(--loss); color: var(--loss-text); padding: 8px 12px; border-radius: var(--radius); font-size: 13px; margin-bottom: 10px; }
-  .auth-success { background: var(--win); color: var(--win-text); padding: 10px 14px; border-radius: var(--radius); font-size: 13px; margin-bottom: 10px; line-height: 1.4; }
+  .auth-help-text { font-size: 12px; color: var(--text-muted); margin-top: 8px; font-style: italic; }
   .auth-switch { text-align: center; font-size: 13px; color: var(--text-muted); margin-top: 12px; }
   .auth-link { background: none; border: none; color: var(--green-dark); font-weight: 500; cursor: pointer; text-decoration: underline; font-size: 13px; font-family: 'DM Sans', sans-serif; }
 
@@ -619,7 +619,7 @@
         <input type="email" id="auth-email" class="auth-input" placeholder="Email address">
         <input type="password" id="auth-password" class="auth-input" placeholder="Password">
         <button class="auth-btn auth-btn-primary" onclick="doLogin()">Sign In</button>
-        <p class="auth-switch"><button class="auth-link" onclick="doPasswordReset()">Forgot password?</button></p>
+        <p class="auth-switch auth-help-text">Forgot your password? Contact an admin for a reset link.</p>
         <p class="auth-switch">Don't have an account? <button class="auth-link" onclick="showRegister()">Register</button></p>
       </div>
       <div id="auth-register-form" style="display:none;">
@@ -1306,39 +1306,6 @@ async function doRegister() {
   } catch(e) {
     console.error('[register] failed:', e.code || '', e.message);
     showAuthError(e.message.replace('Firebase: ', '').replace(/\(auth\/.*\)/, '').trim());
-  }
-}
-
-function showAuthSuccess(msg) {
-  const el = document.getElementById('auth-error');
-  el.textContent = msg;
-  el.className = 'auth-success';
-  el.style.display = 'block';
-}
-
-async function doPasswordReset() {
-  const emailInput = document.getElementById('auth-email');
-  const email = (emailInput.value || '').trim();
-  if (!email) {
-    showAuthError('Please enter your email address first, then tap "Forgot password?"');
-    emailInput.focus();
-    return;
-  }
-  try {
-    await auth.sendPasswordResetEmail(email);
-    // Clear the password field and show a prominent confirmation in place
-    document.getElementById('auth-password').value = '';
-    showAuthSuccess('✓ Reset email sent to ' + email + '. Check your inbox (and spam folder) for a link to set a new password.');
-  } catch(e) {
-    console.error('[reset] failed:', e.code || '', e.message);
-    if (e.code === 'auth/invalid-email') {
-      showAuthError('That doesn’t look like a valid email address.');
-    } else if (e.code === 'auth/user-not-found') {
-      // Don't reveal whether the email exists — same generic success message
-      showAuthSuccess('✓ If ' + email + ' is registered, a reset link is on the way. Check your inbox (and spam folder).');
-    } else {
-      showAuthError('Could not send reset email. Try again in a moment.');
-    }
   }
 }
 
