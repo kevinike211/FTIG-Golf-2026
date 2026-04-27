@@ -1324,6 +1324,18 @@ async function doLogin() {
   }
 }
 
+// Default team capacity. Admins can assign a 3rd member explicitly.
+const DEFAULT_TEAM_CAPACITY = 2;
+
+async function getTeamMemberCount(teamNum) {
+  if (teamNum == null) return 0;
+  const snap = await db.collection('users')
+    .where('role', '==', 'member')
+    .where('teamNum', '==', teamNum)
+    .get();
+  return snap.size;
+}
+
 async function doRegister() {
   const name = document.getElementById('reg-name').value.trim();
   const email = document.getElementById('reg-email').value.trim();
@@ -1351,15 +1363,32 @@ async function doRegister() {
     // write to Firestore under the new security rules.
     const cred = await auth.createUserWithEmailAndPassword(email, password);
     console.log('[register] auth ok, uid =', cred.user.uid, '— writing user doc');
+
+    // After auth, check whether the requested team is already at capacity.
+    // If so, register the user with no team and let the admin assign them
+    // (potentially as a 3rd member with explicit override).
+    let assignedTeam = teamNum;
+    let teamFull = false;
+    if (teamNum != null) {
+      const count = await getTeamMemberCount(teamNum);
+      if (count >= DEFAULT_TEAM_CAPACITY) {
+        assignedTeam = null;
+        teamFull = true;
+      }
+    }
+
     await db.collection('users').doc(cred.user.uid).set({
       name: name,
       email: email,
       role: 'member',
-      teamNum: teamNum,
+      teamNum: assignedTeam,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
-    if (teamNum) {
-      showToast('Welcome! Pre-assigned to Team ' + teamNum + '.');
+
+    if (teamFull) {
+      showToast('Team ' + teamNum + ' is full — an admin will assign you.');
+    } else if (assignedTeam) {
+      showToast('Welcome! Pre-assigned to Team ' + assignedTeam + '.');
     } else {
       showToast('Welcome! Ask an admin to assign you to a team.');
     }
@@ -1509,11 +1538,21 @@ function renderAdminPanel() {
       const team = TEAMS[num];
       const rosterNames = team ? team.players.map(p => p.name.split(',')[0]).join(' / ') : '';
       const members = adminUsersCache.filter(u => u.role !== 'admin' && u.teamNum === num);
+      // Color the count chip based on capacity: empty (gray), under limit (green),
+      // at limit (default green), over limit (red — admin override in effect)
+      let countChip;
+      if (members.length === 0) {
+        countChip = '<span class="admin-team-empty">no users</span>';
+      } else if (members.length > DEFAULT_TEAM_CAPACITY) {
+        countChip = `<span class="admin-team-count" style="background:var(--loss);color:var(--loss-text);" title="Over default capacity (${DEFAULT_TEAM_CAPACITY})">${members.length} / ${DEFAULT_TEAM_CAPACITY}+</span>`;
+      } else {
+        countChip = `<span class="admin-team-count">${members.length} / ${DEFAULT_TEAM_CAPACITY}</span>`;
+      }
       html += '<div class="admin-team-card">' +
         '<div class="admin-team-card-head">' +
           `<div class="admin-team-card-num">${num}</div>` +
-          `<div class="admin-team-card-roster">${rosterNames}</div>` +
-          (members.length === 0 ? '<span class="admin-team-empty">no users</span>' : `<span class="admin-team-count">${members.length}</span>`) +
+          `<div class="admin-team-card-roster">${esc(rosterNames)}</div>` +
+          countChip +
         '</div>';
       if (members.length) {
         html += '<div class="admin-team-card-members">';
@@ -1935,7 +1974,24 @@ async function updateUserRole(uid, value) {
   if (value === 'admin') {
     await db.collection('users').doc(uid).update({ role: 'admin', teamNum: null });
   } else if (value) {
-    await db.collection('users').doc(uid).update({ role: 'member', teamNum: parseInt(value) });
+    const targetTeam = parseInt(value);
+    // Check team capacity before assigning. Use the cache to count current
+    // members on that team (excluding the user being assigned, in case they
+    // are already on it).
+    const onTeam = adminUsersCache.filter(u =>
+      u.role !== 'admin' && u.teamNum === targetTeam && u.uid !== uid
+    ).length;
+    if (onTeam >= DEFAULT_TEAM_CAPACITY) {
+      const ok = confirm(
+        'Team ' + targetTeam + ' already has ' + onTeam + ' members. ' +
+        'Assigning this user would make ' + (onTeam + 1) + '. Continue?'
+      );
+      if (!ok) {
+        await refreshAdminUsers();
+        return;
+      }
+    }
+    await db.collection('users').doc(uid).update({ role: 'member', teamNum: targetTeam });
   } else {
     await db.collection('users').doc(uid).update({ role: 'member', teamNum: null });
   }
