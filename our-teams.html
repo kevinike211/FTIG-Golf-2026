@@ -512,6 +512,20 @@
   .login-help-card a:hover { text-decoration: underline; }
   .login-help-card .login-help-line { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
   .login-help-card .login-help-message { margin-top: 8px; font-size: 12px; color: var(--text-muted); }
+
+  /* ── HELP MODAL ── */
+  .help-section { margin-bottom: 1.25rem; padding-bottom: 1.25rem; border-bottom: 1px solid var(--border); }
+  .help-section:last-child { border-bottom: none; padding-bottom: 0; margin-bottom: 0; }
+  .help-section h3 { font-family: 'Playfair Display', Georgia, serif; font-size: 16px; font-weight: 700; color: var(--green-dark); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .help-section .help-icon { font-size: 18px; }
+  .help-section ol, .help-section ul { padding-left: 20px; margin-top: 6px; }
+  .help-section li { margin-bottom: 6px; font-size: 14px; line-height: 1.5; color: var(--text-secondary); }
+  .help-section li strong { color: var(--text-primary); }
+  .help-section p { font-size: 14px; line-height: 1.5; color: var(--text-secondary); margin-bottom: 6px; }
+  .help-tip { background: var(--green-pale); border-left: 3px solid var(--green-light); padding: 8px 12px; margin-top: 8px; font-size: 13px; color: var(--green-dark); border-radius: 4px; }
+  .help-warn { background: var(--gold-pale); border-left: 3px solid var(--gold); padding: 8px 12px; margin-top: 8px; font-size: 13px; color: #7a5a00; border-radius: 4px; }
+  .help-admin-section { background: var(--bg); padding: 12px; border-radius: var(--radius); border: 1px dashed var(--border-dark); }
+  .help-admin-section h3 { color: var(--green-dark); }
   .auth-switch { text-align: center; font-size: 13px; color: var(--text-muted); margin-top: 12px; }
   .auth-link { background: none; border: none; color: var(--green-dark); font-weight: 500; cursor: pointer; text-decoration: underline; font-size: 13px; font-family: 'DM Sans', sans-serif; }
 
@@ -671,6 +685,7 @@
     <div class="user-bar-inner">
       <span class="user-bar-info" id="user-bar-info"></span>
       <div class="user-bar-actions">
+        <button class="user-bar-btn" onclick="openHelp()">Help</button>
         <button class="user-bar-btn" onclick="openAdminContacts()">Admins</button>
         <button class="user-bar-btn" id="admin-btn" onclick="openAdminPanel()" style="display:none;">Admin</button>
         <button class="user-bar-btn" onclick="doLogout()">Sign Out</button>
@@ -859,6 +874,20 @@
           <button class="admin-save-btn" onclick="saveMyPhone()" style="margin-left:0;">Save</button>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Help Modal -->
+<div class="modal-overlay" id="help-overlay" onclick="if(event.target===this)closeHelp()">
+  <div class="admin-modal">
+    <div class="admin-modal-header">
+      <div class="modal-eyebrow">User Guide</div>
+      <div class="modal-team-name">How to use the app</div>
+      <button class="modal-close" onclick="closeHelp()">&times;</button>
+    </div>
+    <div class="admin-modal-body" id="help-body">
+      <!-- Populated dynamically based on role -->
     </div>
   </div>
 </div>
@@ -1751,6 +1780,124 @@ async function openAdminContacts() {
 
 function closeAdminContacts() {
   document.getElementById('admin-contacts-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// ── HELP / USER GUIDE ──
+function openHelp() {
+  const body = document.getElementById('help-body');
+  const isAdmin = userRole === 'admin';
+  const teamLabel = userTeamNum ? 'Team ' + userTeamNum : 'your team';
+
+  let html = '';
+
+  // Quick navigation
+  html += '<div class="help-section"><h3>⛳ The basics</h3>' +
+    '<p>The standings tab is the home page. Each team has its own tab showing their schedule, opponents, and results.</p>' +
+    '<p>Members can record scores for their own team. Both teams must agree on the score for it to count toward the standings.</p>' +
+    '</div>';
+
+  // Viewing the schedule
+  html += '<div class="help-section"><h3>📅 Viewing the schedule</h3>' +
+    '<ol>' +
+      '<li>Tap your team\'s tab at the top (or any team to view their schedule).</li>' +
+      '<li>Use the filter buttons (<strong>All / Past / Upcoming / Scored / Unscored</strong>) to narrow what you see.</li>' +
+      '<li>Tap a match row to view the result details (scores, points, photo).</li>' +
+      '<li>Tap an opponent\'s name to see their phone numbers in case of weather or scheduling questions.</li>' +
+    '</ol>' +
+    '</div>';
+
+  // Entering a score
+  html += '<div class="help-section"><h3>✏️ Entering a match score</h3>' +
+    '<ol>' +
+      '<li>Open ' + teamLabel + '\'s tab, find the match row.</li>' +
+      '<li>Tap <strong>"+ Add result"</strong>.</li>' +
+      '<li><strong>Easiest:</strong> tap <strong>Scan Scorecard</strong> at the top, take a photo of the card, and the app will read the scores and points automatically. Verify the values before saving.</li>' +
+      '<li>Or fill in the points manually. <strong>The two teams\' points must add to exactly 9</strong> (halves like 4.5 are allowed).</li>' +
+      '<li>Tap <strong>Save result</strong>.</li>' +
+    '</ol>' +
+    '<div class="help-tip">The Win/Loss/Tie auto-calculates from the points — no need to pick it manually.</div>' +
+    '<div class="help-warn">A new score starts as <strong>"awaiting confirmation"</strong> and won\'t affect the standings until the opposing team confirms it.</div>' +
+    '</div>';
+
+  // Confirming opponent scores
+  html += '<div class="help-section"><h3>✓ Confirming an opponent\'s entry</h3>' +
+    '<ol>' +
+      '<li>If the opponent submitted the score first, you\'ll see a yellow <strong>"Confirm"</strong> badge in your team\'s schedule.</li>' +
+      '<li>Tap the badge to open the match.</li>' +
+      '<li>You\'ll see the values they submitted. If they\'re correct, tap <strong>Confirm</strong> — done.</li>' +
+      '<li>If they\'re wrong, tap <strong>Disagree / Edit</strong> and enter the correct values. The match flips to <strong>"Disputed"</strong> for an admin to resolve.</li>' +
+    '</ol>' +
+    '<div class="help-tip">Once both teams agree, the match locks and the result counts in the standings (only admins can edit a confirmed match).</div>' +
+    '</div>';
+
+  // Reading standings
+  html += '<div class="help-section"><h3>🏆 Reading the standings</h3>' +
+    '<ul>' +
+      '<li><strong>Pct</strong> — win percentage (a tie counts as half a win).</li>' +
+      '<li><strong>Pts</strong> — total match points earned across all confirmed matches. <em>Standings are ranked by Pts first, then Pct.</em></li>' +
+      '<li><strong>Avg</strong> — your team\'s average golf strokes per match.</li>' +
+      '<li>Tap a row to jump to that team\'s tab.</li>' +
+    '</ul>' +
+    '</div>';
+
+  // Rescheduling
+  html += '<div class="help-section"><h3>🔄 Rescheduling a match</h3>' +
+    '<ol>' +
+      '<li>On the match row, tap the small calendar icon next to the result button.</li>' +
+      '<li>Pick the new date and add a brief reason (rain, conflict, etc).</li>' +
+      '<li>Save — both teams will see the updated date.</li>' +
+    '</ol>' +
+    '</div>';
+
+  // Help finding admins
+  html += '<div class="help-section"><h3>💬 Need help?</h3>' +
+    '<ul>' +
+      '<li>Tap the <strong>Admins</strong> button in the top bar to see admin contact info.</li>' +
+      '<li>Forgot your password? Contact an admin — they can send you a reset link.</li>' +
+    '</ul>' +
+    '</div>';
+
+  // Admin-only sections
+  if (isAdmin) {
+    html += '<div class="help-section help-admin-section"><h3>🔑 Admin: managing users</h3>' +
+      '<ol>' +
+        '<li>Tap <strong>Admin</strong> in the top bar.</li>' +
+        '<li><strong>Users tab:</strong> search/filter, assign teams, promote to admin, or remove users.</li>' +
+        '<li><strong>Teams tab:</strong> see who\'s on which team at a glance.</li>' +
+        '<li><strong>Settings tab:</strong> control which teams appear (Visible Teams), and edit the contact info shown on the login screen.</li>' +
+      '</ol>' +
+      '<div class="help-warn">You can\'t demote or remove the last admin. Promote someone else first.</div>' +
+      '</div>';
+
+    html += '<div class="help-section help-admin-section"><h3>🔑 Admin: password resets</h3>' +
+      '<ol>' +
+        '<li>Open <strong>Firebase Console</strong> → your project → <strong>Authentication</strong> → <strong>Users</strong>.</li>' +
+        '<li>Find the user, click the <strong>⋮</strong> menu, choose <strong>Reset password</strong>.</li>' +
+        '<li>Copy the link Firebase shows and send it to the user via text/Slack/etc.</li>' +
+      '</ol>' +
+      '</div>';
+
+    html += '<div class="help-section help-admin-section"><h3>🔑 Admin: resolving a disputed match</h3>' +
+      '<ol>' +
+        '<li>Open the match (you\'ll see a red <strong>"Disputed"</strong> badge).</li>' +
+        '<li>Review the values both teams submitted (visible in the modal).</li>' +
+        '<li>Enter the correct values, pick the right Win/Loss/Tie, and Save — admin saves are final.</li>' +
+      '</ol>' +
+      '</div>';
+
+    html += '<div class="help-section help-admin-section"><h3>🔑 Admin: setting your phone</h3>' +
+      '<p>Tap the <strong>Admins</strong> button — at the bottom of that modal you can save a phone number that all members will see.</p>' +
+      '</div>';
+  }
+
+  body.innerHTML = html;
+  document.getElementById('help-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeHelp() {
+  document.getElementById('help-overlay').classList.remove('open');
   document.body.style.overflow = '';
 }
 
@@ -3264,6 +3411,8 @@ document.addEventListener('keydown', e => {
     if (document.getElementById('lightbox-overlay').classList.contains('open')) { closeLightbox(); return; }
     if (document.getElementById('confirm-overlay').classList.contains('open')) { closeClearConfirm(); return; }
     if (document.getElementById('resched-overlay').classList.contains('open')) { closeResched(); return; }
+    if (document.getElementById('help-overlay').classList.contains('open')) { closeHelp(); return; }
+    if (document.getElementById('admin-contacts-overlay').classList.contains('open')) { closeAdminContacts(); return; }
     closeAdminPanel();
     closeScore(); closeContact();
   }
