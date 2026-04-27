@@ -664,6 +664,7 @@
     <div class="user-bar-inner">
       <span class="user-bar-info" id="user-bar-info"></span>
       <div class="user-bar-actions">
+        <button class="user-bar-btn" onclick="openAdminContacts()">Admins</button>
         <button class="user-bar-btn" id="admin-btn" onclick="openAdminPanel()" style="display:none;">Admin</button>
         <button class="user-bar-btn" onclick="doLogout()">Sign Out</button>
       </div>
@@ -828,6 +829,29 @@
     </div>
     <div class="admin-modal-body" id="admin-body">
       <!-- Populated dynamically -->
+    </div>
+  </div>
+</div>
+
+<!-- Admin contacts (read-only, visible to all members) -->
+<div class="modal-overlay" id="admin-contacts-overlay" onclick="if(event.target===this)closeAdminContacts()">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-eyebrow">League Admins</div>
+      <div class="modal-team-name">Need help?</div>
+      <button class="modal-close" onclick="closeAdminContacts()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:1rem;">Contact an admin for password resets, score corrections, or league questions.</p>
+      <div id="admin-contacts-list"></div>
+      <div id="my-phone-section" style="display:none;border-top:1px solid var(--border);margin-top:1rem;padding-top:1rem;">
+        <div class="score-section-label" style="margin-top:0;">Your phone (admins only)</div>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">So league members can contact you. Visible to everyone.</p>
+        <div style="display:flex;gap:8px;">
+          <input type="tel" id="my-phone-input" class="auth-input" style="margin-bottom:0;flex:1;" placeholder="(555) 123-4567">
+          <button class="admin-save-btn" onclick="saveMyPhone()" style="margin-left:0;">Save</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -1600,6 +1624,83 @@ async function applyVisibleTeams() {
 function closeAdminPanel() {
   document.getElementById('admin-overlay').classList.remove('open');
   document.body.style.overflow = '';
+}
+
+// ── ADMIN CONTACTS (visible to all signed-in members) ──
+async function openAdminContacts() {
+  if (!currentUser) { showToast('Please sign in first'); return; }
+  const list = document.getElementById('admin-contacts-list');
+  list.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:8px 0;">Loading...</div>';
+  document.getElementById('admin-contacts-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  try {
+    const snap = await db.collection('users').where('role', '==', 'admin').get();
+    const admins = [];
+    snap.forEach(d => admins.push(Object.assign({ uid: d.id }, d.data())));
+    admins.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+    if (!admins.length) {
+      list.innerHTML = '<div style="color:var(--text-muted);font-size:13px;">No admins listed yet.</div>';
+    } else {
+      list.innerHTML = admins.map(a => {
+        const name = esc(a.name || 'Admin');
+        const email = esc(a.email || '');
+        const phone = a.phone ? esc(a.phone) : null;
+        const phoneRaw = a.phone ? a.phone.replace(/\D/g, '') : '';
+        return '<div class="player-card">' +
+          '<div class="player-avatar">' + esc(initials(a.name || a.email || '?')) + '</div>' +
+          '<div class="player-info">' +
+            '<div class="player-name">' + name + '</div>' +
+            '<div class="player-contact">' +
+              (email ? '<a href="mailto:' + esc(email) + '" class="contact-line">' +
+                '<svg class="contact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>' +
+                email + '</a>' : '') +
+              (phone ? '<br><a href="tel:' + esc(phoneRaw) + '" class="contact-line">' +
+                '<svg class="contact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.12 1.19 2 2 0 012.12 0h3a2 2 0 012 1.72c.12.96.36 1.9.7 2.81a2 2 0 01-.45 2.11L6.17 7.84a16 16 0 006 6l1.2-1.2a2 2 0 012.11-.45c.91.34 1.85.58 2.81.7A2 2 0 0122 16.92z"/></svg>' +
+                phone + '</a>' : '') +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+  } catch (e) {
+    console.error('Failed to load admins', e);
+    list.innerHTML = '<div style="color:var(--loss-text);font-size:13px;">Failed to load admins.</div>';
+  }
+
+  // If the current user is an admin, show the phone-edit section pre-filled with their phone
+  const phoneSection = document.getElementById('my-phone-section');
+  if (userRole === 'admin') {
+    phoneSection.style.display = 'block';
+    try {
+      const me = await db.collection('users').doc(currentUser.uid).get();
+      document.getElementById('my-phone-input').value = me.exists && me.data().phone ? me.data().phone : '';
+    } catch(e) { /* ignore */ }
+  } else {
+    phoneSection.style.display = 'none';
+  }
+}
+
+function closeAdminContacts() {
+  document.getElementById('admin-contacts-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+async function saveMyPhone() {
+  if (userRole !== 'admin' || !currentUser) return;
+  const phone = (document.getElementById('my-phone-input').value || '').trim();
+  // Allow empty (clear) or any non-empty string up to ~30 chars
+  if (phone.length > 30) { showToast('Phone too long'); return; }
+  try {
+    await db.collection('users').doc(currentUser.uid).update({ phone: phone || firebase.firestore.FieldValue.delete() });
+    showToast(phone ? 'Phone updated' : 'Phone removed');
+    // Refresh the visible list so the change appears immediately
+    openAdminContacts();
+  } catch(e) {
+    console.error('Failed to save phone', e);
+    showToast('Failed to save');
+  }
 }
 
 async function updateUserRole(uid, value) {
