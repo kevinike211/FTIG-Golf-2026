@@ -109,6 +109,13 @@ service cloud.firestore {
       allow read: if signedIn();
       allow write: if isAdmin();
     }
+    // Login-help contact info (admin name/email/phone/message).
+    // Publicly readable — shown on the login screen so users who can't sign in
+    // know who to contact for password resets. Admins can edit.
+    match /config/loginHelp {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
     // Catch-all for any other config docs added later: admin-only.
     match /config/{doc} {
       allow read, write: if isAdmin();

@@ -506,6 +506,12 @@
   .auth-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
   .auth-error { background: var(--loss); color: var(--loss-text); padding: 8px 12px; border-radius: var(--radius); font-size: 13px; margin-bottom: 10px; }
   .auth-help-text { font-size: 12px; color: var(--text-muted); margin-top: 8px; font-style: italic; }
+  .login-help-card { margin-top: 16px; padding: 12px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); font-size: 13px; line-height: 1.5; color: var(--text-secondary); }
+  .login-help-card-title { font-weight: 600; color: var(--green-dark); margin-bottom: 6px; font-size: 13px; }
+  .login-help-card a { color: var(--green-dark); text-decoration: none; }
+  .login-help-card a:hover { text-decoration: underline; }
+  .login-help-card .login-help-line { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+  .login-help-card .login-help-message { margin-top: 8px; font-size: 12px; color: var(--text-muted); }
   .auth-switch { text-align: center; font-size: 13px; color: var(--text-muted); margin-top: 12px; }
   .auth-link { background: none; border: none; color: var(--green-dark); font-weight: 500; cursor: pointer; text-decoration: underline; font-size: 13px; font-family: 'DM Sans', sans-serif; }
 
@@ -621,6 +627,7 @@
         <button class="auth-btn auth-btn-primary" onclick="doLogin()">Sign In</button>
         <p class="auth-switch auth-help-text">Forgot your password? Contact an admin for a reset link.</p>
         <p class="auth-switch">Don't have an account? <button class="auth-link" onclick="showRegister()">Register</button></p>
+        <div id="login-help-card" class="login-help-card" style="display:none;"></div>
       </div>
       <div id="auth-register-form" style="display:none;">
         <input type="text" id="reg-name" class="auth-input" placeholder="Full name">
@@ -1513,9 +1520,69 @@ function renderAdminPanel() {
       '<button class="admin-mini-btn" onclick="selectAllVisible(false)">Clear all</button>' +
       '<button class="admin-save-btn" onclick="applyVisibleTeams()">Apply</button>' +
       '</div>';
+
+    // Login-help contact info section
+    html += '<hr style="margin:1.5rem 0;border:none;border-top:1px solid var(--border);">';
+    html += '<h3 class="admin-section-title">Login Screen Help Contact</h3>';
+    html += '<p class="admin-section-hint">Shown on the sign-in screen so users who can\'t log in know who to contact for password resets.</p>';
+    html += '<div id="login-help-form" class="login-help-form">' +
+      '<input type="text" id="lh-name" class="auth-input" placeholder="Contact name (e.g. \'Kevin Eisenhauer\')">' +
+      '<input type="email" id="lh-email" class="auth-input" placeholder="Email address">' +
+      '<input type="tel" id="lh-phone" class="auth-input" placeholder="Phone number">' +
+      '<textarea id="lh-message" class="notes-input" placeholder="Optional message (e.g. \'Text me for a reset link\')"></textarea>' +
+      '<div class="admin-visible-actions" style="margin-top:8px;">' +
+        '<button class="admin-mini-btn" onclick="clearLoginHelp()">Clear all</button>' +
+        '<button class="admin-save-btn" onclick="saveLoginHelp()">Save</button>' +
+      '</div>' +
+    '</div>';
   }
 
   document.getElementById('admin-body').innerHTML = html;
+
+  // Pre-fill the login-help form if we're on the settings tab
+  if (adminCurrentTab === 'settings') {
+    db.collection('config').doc('loginHelp').get().then(doc => {
+      if (!doc.exists) return;
+      const d = doc.data() || {};
+      const setVal = (id, v) => { const el = document.getElementById(id); if (el && v) el.value = v; };
+      setVal('lh-name', d.name);
+      setVal('lh-email', d.email);
+      setVal('lh-phone', d.phone);
+      setVal('lh-message', d.message);
+    }).catch(() => {});
+  }
+}
+
+async function saveLoginHelp() {
+  if (userRole !== 'admin') return;
+  const data = {
+    name: (document.getElementById('lh-name').value || '').trim(),
+    email: (document.getElementById('lh-email').value || '').trim(),
+    phone: (document.getElementById('lh-phone').value || '').trim(),
+    message: (document.getElementById('lh-message').value || '').trim()
+  };
+  try {
+    await db.collection('config').doc('loginHelp').set(data);
+    showToast('Login help saved');
+  } catch (e) {
+    console.error('Save login help failed', e);
+    showToast('Failed to save');
+  }
+}
+
+async function clearLoginHelp() {
+  if (userRole !== 'admin') return;
+  if (!confirm('Remove the login screen contact info?')) return;
+  try {
+    await db.collection('config').doc('loginHelp').set({ name: '', email: '', phone: '', message: '' });
+    document.getElementById('lh-name').value = '';
+    document.getElementById('lh-email').value = '';
+    document.getElementById('lh-phone').value = '';
+    document.getElementById('lh-message').value = '';
+    showToast('Login help cleared');
+  } catch (e) {
+    showToast('Failed to clear');
+  }
 }
 
 function renderAdminUsersListHTML() {
@@ -3286,6 +3353,38 @@ auth.onAuthStateChanged(async (user) => {
 // App initialization is handled by auth.onAuthStateChanged above
 // Load cached scores from localStorage as fallback while Firestore loads
 loadScores();
+
+// Fetch the public login-help doc and render it (no auth required)
+loadLoginHelp();
+async function loadLoginHelp() {
+  const card = document.getElementById('login-help-card');
+  if (!card) return;
+  try {
+    const doc = await db.collection('config').doc('loginHelp').get();
+    if (!doc.exists) return;
+    const d = doc.data() || {};
+    if (!d.name && !d.email && !d.phone && !d.message) return;
+    let html = '<div class="login-help-card-title">Need help signing in?</div>';
+    if (d.name) html += '<div>' + esc(d.name) + '</div>';
+    if (d.email) {
+      html += '<div class="login-help-line">' +
+        '<svg class="contact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>' +
+        '<a href="mailto:' + esc(d.email) + '">' + esc(d.email) + '</a></div>';
+    }
+    if (d.phone) {
+      const phoneRaw = String(d.phone).replace(/\D/g, '');
+      html += '<div class="login-help-line">' +
+        '<svg class="contact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.12 1.19 2 2 0 012.12 0h3a2 2 0 012 1.72c.12.96.36 1.9.7 2.81a2 2 0 01-.45 2.11L6.17 7.84a16 16 0 006 6l1.2-1.2a2 2 0 012.11-.45c.91.34 1.85.58 2.81.7A2 2 0 0122 16.92z"/></svg>' +
+        '<a href="tel:' + esc(phoneRaw) + '">' + esc(d.phone) + '</a></div>';
+    }
+    if (d.message) html += '<div class="login-help-message">' + esc(d.message) + '</div>';
+    card.innerHTML = html;
+    card.style.display = 'block';
+  } catch (e) {
+    // Doc may not exist yet — silently skip
+    console.log('No login-help doc:', e.message || e);
+  }
+}
 </script>
 </body>
 </html>
