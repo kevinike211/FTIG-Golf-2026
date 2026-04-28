@@ -1721,11 +1721,24 @@ async function removeUserConfirm(uid, name) {
       return;
     }
   }
-  if (!confirm('Remove ' + (name || 'this user') + '? They\u2019ll lose access until they\u2019re re-added by an admin.')) return;
+
+  const display = name || (target && (target.name || target.email)) || 'this user';
+  const ok = confirm(
+    'Remove ' + display + '?\n\n' +
+    'This deletes their app profile but their email login still exists ' +
+    'in Firebase Auth. To free up the email so they can re-register, ' +
+    'you must ALSO delete them from the Firebase Console.\n\n' +
+    'Click OK to remove their profile and open the Firebase Console Users page.'
+  );
+  if (!ok) return;
+
   try {
     await db.collection('users').doc(uid).delete();
-    showToast('User removed');
+    showToast('Profile removed \u2014 also delete from Firebase Auth');
     await refreshAdminUsers();
+    // Open the Firebase Console Authentication Users page in a new tab
+    const projectId = (firebaseConfig && firebaseConfig.projectId) || 'ftig-golf-league-2026';
+    window.open('https://console.firebase.google.com/project/' + encodeURIComponent(projectId) + '/authentication/users', '_blank');
   } catch(e) {
     console.error('Failed to remove user', e);
     showToast('Failed to remove');
@@ -1927,6 +1940,16 @@ function openHelp() {
 
     html += '<div class="help-section help-admin-section"><h3>🔑 Admin: setting your phone</h3>' +
       '<p>Tap the <strong>Admins</strong> button — at the bottom of that modal you can save a phone number that all members will see.</p>' +
+      '</div>';
+
+    html += '<div class="help-section help-admin-section"><h3>🔑 Admin: removing a user fully</h3>' +
+      '<p>Removing a user from the app deletes their profile but does <strong>NOT</strong> free up their email — Firebase Auth keeps a separate login record. To allow that email to re-register:</p>' +
+      '<ol>' +
+        '<li>Click the <strong>×</strong> next to the user in the Admin panel — confirm the dialog. The Firebase Auth users page will open automatically in a new tab.</li>' +
+        '<li>In that tab, find the user\'s email row.</li>' +
+        '<li>Click the <strong>⋮</strong> menu → <strong>Delete account</strong>.</li>' +
+      '</ol>' +
+      '<div class="help-tip">If you skip step 2-3, the email stays locked and the user can\'t re-register with it.</div>' +
       '</div>';
   }
 
